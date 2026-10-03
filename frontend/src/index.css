@@ -370,6 +370,7 @@ select:focus {
 }
 .banner strong { font-size: 17px; }
 .banner span { font-size: 14px; }
+.banner .banner-grouped { font-size: 14px; }
 .banner-ico {
   flex: none;
   width: 34px;
@@ -1346,6 +1347,11 @@ a.counter:hover {
 .inc-report:hover {
   border-color: var(--ink-2);
 }
+.inc-report-sm {
+  padding: 8px 10px;
+  gap: 8px;
+}
+.grouped-count { margin-bottom: 8px; }
 .q-critical { border-left-color: var(--st-critical); }
 .q-in_review { border-left-color: var(--st-review); }
 .q-failed { border-left-color: var(--st-failed); }

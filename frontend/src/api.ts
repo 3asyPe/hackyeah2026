@@ -93,10 +93,22 @@ export interface ReportSummary {
 export interface ReportPublic extends ReportSummary {
   current_assessment: Assessment | null
   simulation: Simulation | null
+  /** Other published reports in the same incident; 0 unless this report is published/critical. */
+  incident_other_reports: number
+}
+
+export interface IncidentSibling {
+  id: string
+  status: Status
+  description: string | null
+  has_photo: boolean
+  submitted_at: string
 }
 
 export interface ReportDetail extends ReportPublic {
   incident_state: IncidentState
+  /** Other reports (any status) in the same incident, oldest first. */
+  incident_reports: IncidentSibling[]
   assessments: Assessment[]
   reviews: Review[]
   processing_started_at: string | null

@@ -36,6 +36,46 @@ function prefill(r: ReportDetail): { category: Category; severity: Level; urgenc
   }
 }
 
+function GroupingCard({ r }: { r: ReportDetail }) {
+  const sibs = r.incident_reports
+  return (
+    <section className="card">
+      <header className="card-head">
+        <h3>Grouping</h3>
+        {r.incident_state !== 'provisional' && (
+          <Link className="small" to={`/operator/incidents/${r.incident_id}`}>Incident {shortId(r.incident_id ?? '')} →</Link>
+        )}
+      </header>
+      {r.incident_state === 'provisional' ? (
+        <div className="muted small">Not grouped yet. Grouping runs after the report is classified.</div>
+      ) : sibs.length === 0 ? (
+        <div className="muted small">Only report in this incident so far.</div>
+      ) : (
+        <>
+          <div className="small grouped-count">
+            Grouped with <strong>{sibs.length}</strong> other report{sibs.length === 1 ? '' : 's'}
+          </div>
+          <div className="inc-reports">
+            {sibs.map((s) => (
+              <Link key={s.id} to={`/operator/reports/${s.id}`} className={`inc-report inc-report-sm q-${s.status}`}>
+                <div className="q-body">
+                  <div className="q-top">
+                    <span className="mono">{shortId(s.id)}</span>
+                    <StatusChip status={s.status} />
+                    <span className="muted small">{ago(s.submitted_at)}</span>
+                  </div>
+                  <div className="q-desc small">{s.description || <span className="muted">{s.has_photo ? 'Photo only' : 'No description'}</span>}</div>
+                </div>
+                <span className="chev">›</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
 function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetail) => void }) {
   const { logout } = useOperator()
   const init = prefill(r)
@@ -302,6 +342,8 @@ export default function ReportDetailPage() {
             <header className="card-head"><h3>Final classification</h3></header>
             <FinalLine final={r.final} />
           </section>
+
+          <GroupingCard r={r} />
 
           {r.simulation && (
             <section className="card">
