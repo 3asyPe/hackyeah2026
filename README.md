@@ -34,6 +34,12 @@ npm install && npm run dev
 - Client: http://localhost:5173
 - Operator: http://localhost:5173/operator (token `demo`)
 
+## Privacy
+
+Photos are stored without EXIF/GPS metadata, the public map never shows descriptions or photos, reporters can delete
+their report from its status page, and reports are deleted automatically after 30 days (rejected ones after 7). The
+privacy notice is at `/privacy`. Details and open gaps: [docs/privacy.md](docs/privacy.md).
+
 ## Demo without an API key
 
 With no `OPENAI_API_KEY` the backend runs in **replay** mode. The bundled samples in `backend/samples/` come with real

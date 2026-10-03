@@ -58,7 +58,6 @@ function Sheet({ id, onClose }: { id: string; onClose: () => void }) {
                     <LevelPill level={r.urgency} label="Urg" />
                   </span>
                 </div>
-                <p>{r.description || <span className="muted">Photo only — no description</span>}</p>
               </li>
             ))}
           </ul>

@@ -42,6 +42,11 @@ MAX_INCIDENT_AGE_H = _f("MAX_INCIDENT_AGE_H", 72)  # reports older than this are
 MAP_MAX_AGE_H = _f("MAP_MAX_AGE_H", 24)  # public map hides incidents whose latest report is older
 ASSESS_WORKERS = int(_f("ASSESS_WORKERS", 4))
 
+# Retention: reports are deleted this many days after their last change (0 disables). Checked hourly.
+RETENTION_DAYS = int(_f("RETENTION_DAYS", 30))
+REJECTED_RETENTION_DAYS = int(_f("REJECTED_RETENTION_DAYS", 7))
+RETENTION_CHECK_S = _f("RETENTION_CHECK_S", 3600)
+
 # Grouping (ERD §10)
 MIN_TOP_CONFIDENCE = _f("MIN_TOP_CONFIDENCE", 50)  # top severity/urgency confidence below this => in_review
 GROUP_MAX_DISTANCE_M = _f("GROUP_MAX_DISTANCE_M", 200)

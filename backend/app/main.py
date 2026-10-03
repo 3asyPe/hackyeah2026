@@ -1,6 +1,7 @@
 """FastAPI app: public + operator endpoints (contract in ../PLAN.md)."""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import io
 import json
@@ -18,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
-from . import assessor, config, jobs, samples, views
+from . import assessor, config, jobs, privacy, samples, views
 from .db import GROUP_LOCK, get_conn, init_db, new_id, now_iso, tx
 from .processing import recover_interrupted, route_in_tx
 
@@ -43,8 +44,19 @@ async def lifespan(app: FastAPI):
                               "replay_first": f"REPLAY of recorded samples first, live OpenAI {config.OPENAI_MODEL} otherwise",
                               "replay": "REPLAY of recorded samples (keyword mock otherwise)",
                               "mock": "MOCK (keyword-based)"}[mode])
+    purger = asyncio.create_task(_retention_loop())
     yield
+    purger.cancel()
     jobs.shutdown()
+
+
+async def _retention_loop():
+    while True:
+        try:
+            await asyncio.to_thread(privacy.purge_expired)
+        except Exception:
+            log.exception("retention purge failed")
+        await asyncio.sleep(config.RETENTION_CHECK_S)
 
 
 app = FastAPI(title="Incident Reporter API", version="1.0", lifespan=lifespan)
@@ -172,6 +184,11 @@ def submit_report(
     report_id, incident_id = new_id(), new_id()
     photo_name = None
     if photo_bytes:
+        # The idempotency hash above covers the bytes as uploaded; the stored copy has no EXIF/GPS/device data.
+        try:
+            photo_bytes = privacy.strip_metadata(photo_bytes)
+        except Exception:
+            _bad("photo could not be processed")
         photo_name = f"{report_id}.{ext}"
         (config.UPLOAD_DIR / photo_name).write_bytes(photo_bytes)
     now = now_iso()
@@ -254,6 +271,28 @@ def get_report_photo_public(report_id: str, token: Optional[str] = Query(None),
     return _photo_response(_report_with_receipt(conn, report_id, token))
 
 
+@app.delete("/api/reports/{report_id}", status_code=204)
+def delete_report_public(report_id: str, x_receipt_token: Optional[str] = Header(None),
+                         conn: sqlite3.Connection = Depends(get_conn)):
+    """Reporter-initiated erasure: the report, its photo, assessments and reviews are deleted for good."""
+    _report_with_receipt(conn, report_id, x_receipt_token)
+    with GROUP_LOCK, tx(conn):
+        r = conn.execute("SELECT status FROM report WHERE id = ?", (report_id,)).fetchone()
+        if r is None:
+            raise HTTPException(404, "report not found")
+        if r["status"] == "processing":
+            raise HTTPException(409, "report is being processed; try again in a few seconds")
+        photo = privacy.delete_report_in_tx(conn, report_id)
+    privacy.unlink_photo(photo)
+
+
+@app.get("/api/privacy")
+def privacy_info():
+    """Facts the privacy notice shows, so it matches how this instance is configured."""
+    return {"retention_days": config.RETENTION_DAYS, "rejected_retention_days": config.REJECTED_RETENTION_DAYS,
+            "assessor_mode": config.ASSESSOR_MODE}
+
+
 def _published_by_incident(conn) -> dict[str, list]:
     out: dict[str, list] = {}
     for row in conn.execute(views.REPORT_SELECT + " WHERE r.status = 'published' ORDER BY r.incident_time"):
@@ -289,8 +328,9 @@ def get_incident_public(incident_id: str, conn: sqlite3.Connection = Depends(get
     if inc is None or not pub or not _on_map(pub):
         raise HTTPException(404, "incident not found")
     d = _marker(inc, pub)
+    # No description or photo here: free text may name or describe people (ERD v2 §2).
     d["reports"] = [{
-        "id": r["id"], "description": r["description"], "incident_time": r["incident_time"],
+        "id": r["id"], "incident_time": r["incident_time"],
         "severity": (views.final_of(r) or {}).get("severity"), "urgency": (views.final_of(r) or {}).get("urgency"),
     } for r in pub]
     return d

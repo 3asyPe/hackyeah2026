@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ApiError, getReport, reportPhotoUrl } from '../api'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ApiError, deleteReport, getReport, reportPhotoUrl } from '../api'
 import type { ReportPublic, Status } from '../api'
 import { usePoll } from '../hooks'
 import { ErrorBox, FinalLine, SimulationNote, Spinner, StatusChip } from '../components/ui'
-import { findMyReport, patchMyReport } from '../storage'
+import { findMyReport, patchMyReport, removeMyReport } from '../storage'
 import { fmtCoord, fmtTime } from '../labels'
 
 function intervalFor(s: Status | undefined): number | null {
@@ -17,6 +17,37 @@ function intervalFor(s: Status | undefined): number | null {
 
 function groupedLine(n: number) {
   return `Grouped with ${n} other report${n === 1 ? '' : 's'} of the same incident.`
+}
+
+/** Erases the report on the server (or finds it already gone) and drops the copy kept on this device. */
+function DeleteButton({ id, token, submissionKey }: { id: string; token: string; submissionKey: string }) {
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const onDelete = async () => {
+    if (!window.confirm('Delete this report for good? The photo, description and assessment are erased and cannot be recovered.')) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await deleteReport(id, token)
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 404)) {
+        setErr(e instanceof Error ? e.message : 'Could not delete the report.')
+        setBusy(false)
+        return
+      }
+    }
+    removeMyReport(submissionKey)
+    navigate('/my', { replace: true })
+  }
+  return (
+    <div className="delete-row">
+      <button type="button" className="btn btn-danger btn-block" onClick={() => void onDelete()} disabled={busy}>
+        {busy ? <Spinner size={18} /> : 'Delete report'}
+      </button>
+      {err && <div className="hint hint-bad">{err}</div>}
+    </div>
+  )
 }
 
 function Banner({ r }: { r: ReportPublic }) {
@@ -133,6 +164,12 @@ export default function StatusPage() {
         ) : (
           <ErrorBox error={err} title={err instanceof ApiError && err.status === 403 ? 'Receipt token rejected' : 'Could not load report'} />
         )}
+        {err instanceof ApiError && err.status === 404 && (
+          <>
+            <p className="muted small">It may have been deleted after the retention period.</p>
+            <DeleteButton id={id} token={token} submissionKey={mine.submission_key} />
+          </>
+        )}
       </div>
     )
   }
@@ -185,7 +222,10 @@ export default function StatusPage() {
           <dd>{fmtTime(report.submitted_at)}</dd>
         </dl>
       </section>
-      <p className="disclaimer center">Submitted reports are read-only. Keep this device to follow updates.</p>
+      <DeleteButton id={report.id} token={token} submissionKey={mine.submission_key} />
+      <p className="disclaimer center">
+        Submitted reports are read-only. Keep this device to follow updates. <Link to="/privacy">Privacy</Link>
+      </p>
     </div>
   )
 }

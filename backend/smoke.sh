@@ -13,7 +13,12 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 j() { "$PY" -c "import json,sys; d=json.load(sys.stdin); print(eval(sys.argv[1], {'d': d}))" "$1"; }
 uuid() { "$PY" -c "import uuid; print(uuid.uuid4())"; }
 
-"$PY" -c "from PIL import Image; Image.new('RGB',(32,32),(220,80,20)).save('$TMP/tiny.jpg','JPEG')"
+# The test photo carries EXIF with a device name and GPS position; the server must not keep them.
+"$PY" -c "
+from PIL import Image
+ex = Image.Exif(); ex[0x0110] = 'SmokePhone'; ex.get_ifd(0x8825)[2] = (50.0, 3.0, 40.0)
+Image.new('RGB', (32, 32), (220, 80, 20)).save('$TMP/tiny.jpg', 'JPEG', exif=ex)"
+NOEXIF="from PIL import Image; import sys; im = Image.open(sys.argv[1]); sys.exit(len(im.getexif()) or b'SmokePhone' in open(sys.argv[1], 'rb').read())"
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 echo "== health"; curl -fsS "$BASE/api/health" | tee "$TMP/h.json"; echo
@@ -59,14 +64,16 @@ curl -fsS -H "Authorization: Bearer $OP" "$BASE/api/operator/reports/$RID" > "$T
 [ "$(j "d['current_assessment']['severity_confidence']['high']" < "$TMP/op.json")" != "None" ] || fail "no confidence"
 
 echo "== public photo"
-CODE="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/api/reports/$RID/photo?token=$TOKEN")"
+CODE="$(curl -sS -o "$TMP/stored.jpg" -w '%{http_code}' "$BASE/api/reports/$RID/photo?token=$TOKEN")"
 [ "$CODE" = "200" ] || fail "photo expected 200, got $CODE"
+"$PY" -c "$NOEXIF" "$TMP/stored.jpg" || fail "stored photo still has EXIF metadata"
 
 echo "== accident report (published + simulation), then a second nearby one merges"
-sub_simple() { # desc lat lon -> id
-  local k t; k="$(uuid)"; t="smoke-receipt-$(uuid)"
-  curl -fsS -X POST "$BASE/api/reports" -F submission_key="$k" -F receipt_token="$t" -F description="$1" \
-    -F latitude="$2" -F longitude="$3" -F incident_time="$NOW" | j "d['id']"
+sub_simple() { # desc lat lon -> id (receipt token kept in $TMP/tok-<id>)
+  local k t id; k="$(uuid)"; t="smoke-receipt-$(uuid)"
+  id="$(curl -fsS -X POST "$BASE/api/reports" -F submission_key="$k" -F receipt_token="$t" -F description="$1" \
+    -F latitude="$2" -F longitude="$3" -F incident_time="$NOW" | j "d['id']")"
+  echo "$t" > "$TMP/tok-$id"; echo "$id"
 }
 A1="$(sub_simple "car accident on the roundabout" 50.0400 19.9000)"
 sleep 2.5
@@ -83,7 +90,9 @@ echo "== map"
 curl -fsS "$BASE/api/incidents" > "$TMP/map.json"
 echo "markers: $(j "len(d)" < "$TMP/map.json")"
 [ "$(j "[m['published_count'] for m in d if m['id']=='$INC'][0]" < "$TMP/map.json")" = "2" ] || fail "map count"
-curl -fsS "$BASE/api/incidents/$INC" | j "(d['category'], d['max_severity'], len(d['reports']))"
+curl -fsS "$BASE/api/incidents/$INC" > "$TMP/inc.json"
+j "(d['category'], d['max_severity'], len(d['reports']))" < "$TMP/inc.json"
+[ "$(j "any('description' in r for r in d['reports'])" < "$TMP/inc.json")" = "False" ] || fail "public card exposes descriptions"
 
 echo "== operator auth"
 CODE="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/api/operator/summary")"
@@ -124,4 +133,35 @@ curl -fsS -H "Authorization: Bearer $OP" "$BASE/api/operator/reports/$FID" > "$T
 [ "$(j "d['status']" < "$TMP/f.json")" = "published" ] || fail "retry not published: $(j "d['status']" < "$TMP/f.json")"
 [ "$(j "len(d['assessments'])" < "$TMP/f.json")" = "2" ] || fail "expected 2 attempts"
 
+echo "== privacy info"
+curl -fsS "$BASE/api/privacy" | tee "$TMP/pv.json"; echo
+[ "$(j "d['retention_days'] > 0" < "$TMP/pv.json")" = "True" ] || fail "retention not configured"
+
+echo "== reporter deletes their report (bad token -> 403, processing -> 409, then 204 and gone)"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H 'X-Receipt-Token: wrong-token-wrong-token' "$BASE/api/reports/$RID")"
+[ "$CODE" = "403" ] || fail "delete with bad token expected 403, got $CODE"
+K="$(uuid)"; T="smoke-receipt-$(uuid)"
+PID="$(curl -fsS -X POST "$BASE/api/reports" -F submission_key="$K" -F receipt_token="$T" -F description="trash pile" \
+  -F latitude=50.0100 -F longitude=19.8800 -F incident_time="$NOW" | j "d['id']")"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "X-Receipt-Token: $T" "$BASE/api/reports/$PID")"
+[ "$CODE" = "409" ] || fail "delete while processing expected 409, got $CODE"
+sleep 2.5
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "X-Receipt-Token: $T" "$BASE/api/reports/$PID")"
+[ "$CODE" = "204" ] || fail "delete of a published report expected 204, got $CODE"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "X-Receipt-Token: $TOKEN" "$BASE/api/reports/$RID")"
+[ "$CODE" = "204" ] || fail "delete of a critical report expected 204, got $CODE"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "X-Receipt-Token: $TOKEN" "$BASE/api/reports/$RID")"
+[ "$CODE" = "404" ] || fail "deleted report expected 404, got $CODE"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $OP" "$BASE/api/operator/reports/$RID")"
+[ "$CODE" = "404" ] || fail "deleted report still visible to the operator ($CODE)"
+
+echo "== deleting one of two grouped reports keeps the incident, deleting both removes it and its merged stub"
+del_own() { curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "X-Receipt-Token: $(cat "$TMP/tok-$1")" "$BASE/api/reports/$1"; }
+[ "$(del_own "$A2")" = "204" ] || fail "delete A2"
+[ "$(curl -fsS "$BASE/api/incidents/$INC" | j "d['published_count']")" = "1" ] || fail "incident count after deleting A2"
+[ "$(del_own "$A1")" = "204" ] || fail "delete A1"
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $OP" "$BASE/api/operator/incidents/$INC")"
+[ "$CODE" = "404" ] || fail "empty incident still exists ($CODE)"
+curl -fsS -H "Authorization: Bearer $OP" "$BASE/api/operator/incidents?state=merged" > "$TMP/mg.json"
+[ "$(j "sum(1 for i in d if i['merged_into_id'] == '$INC')" < "$TMP/mg.json")" = "0" ] || fail "merged stub left behind"
 echo "ALL SMOKE CHECKS PASSED"

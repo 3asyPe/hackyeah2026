@@ -125,9 +125,9 @@ export interface IncidentMarker {
   max_severity: Level | null
 }
 
+/** Public view of a report: no description or photo. */
 export interface IncidentPublicReport {
   id: string
-  description: string | null
   incident_time: string
   severity: Level | null
   urgency: Level | null
@@ -277,6 +277,14 @@ export function getReportByKey(submissionKey: string, receiptToken: string): Pro
   })
 }
 
+/** Permanently deletes the report, its photo and its assessments (204). */
+export function deleteReport(id: string, receiptToken: string): Promise<null> {
+  return request<null>(`/api/reports/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { 'X-Receipt-Token': receiptToken },
+  })
+}
+
 export const reportPhotoUrl = (id: string, receiptToken: string) =>
   `/api/reports/${encodeURIComponent(id)}/photo?token=${encodeURIComponent(receiptToken)}`
 
@@ -308,6 +316,13 @@ export interface Sample {
 }
 
 export const getHealth = () => request<Health>('/api/health')
+
+export interface PrivacyInfo {
+  retention_days: number
+  rejected_retention_days: number
+  assessor_mode: AssessorMode
+}
+export const getPrivacy = () => request<PrivacyInfo>('/api/privacy')
 export const getSamples = () => request<Sample[]>('/api/samples')
 
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
