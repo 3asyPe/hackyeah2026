@@ -270,6 +270,13 @@ export function getReport(id: string, receiptToken: string): Promise<ReportPubli
   })
 }
 
+// Recovers the id of a submission whose response was lost (404 = server never stored it).
+export function getReportByKey(submissionKey: string, receiptToken: string): Promise<SubmitResult> {
+  return request<SubmitResult>(`/api/reports/by-key/${encodeURIComponent(submissionKey)}`, {
+    headers: { 'X-Receipt-Token': receiptToken },
+  })
+}
+
 export const reportPhotoUrl = (id: string, receiptToken: string) =>
   `/api/reports/${encodeURIComponent(id)}/photo?token=${encodeURIComponent(receiptToken)}`
 

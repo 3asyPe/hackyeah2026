@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getReport } from '../api'
+import { ApiError, getReport, getReportByKey } from '../api'
 import type { Status } from '../api'
 import { StatusChip, Empty } from '../components/ui'
-import { loadMyReports, patchMyReport, removeMyReport } from '../storage'
+import { loadMyReports, patchMyReport, removeMyReport, upsertMyReport } from '../storage'
 import type { MyReport } from '../storage'
 import { ago, fmtTime } from '../labels'
 
@@ -12,6 +12,8 @@ const asStatus = (s?: string) => (s && (STATUSES as string[]).includes(s) ? (s a
 
 export default function MyReportsPage() {
   const [list, setList] = useState<MyReport[]>(() => loadMyReports())
+  // submission_keys the server says it never stored (404 on lookup)
+  const [lost, setLost] = useState<Set<string>>(() => new Set())
 
   // refresh statuses once on open
   useEffect(() => {
@@ -22,6 +24,26 @@ export default function MyReportsPage() {
       res.forEach((x, i) => {
         if (x.status === 'fulfilled') patchMyReport(items[i].id!, { last_status: x.value.status })
       })
+      setList(loadMyReports())
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // recover ids of submissions whose response was lost (e.g. page reloaded mid-send)
+  useEffect(() => {
+    let cancelled = false
+    const items = loadMyReports().filter((r) => !r.id)
+    Promise.allSettled(items.map((r) => getReportByKey(r.submission_key, r.receipt_token))).then((res) => {
+      if (cancelled) return
+      const missing = new Set<string>()
+      res.forEach((x, i) => {
+        const key = items[i].submission_key
+        if (x.status === 'fulfilled') upsertMyReport({ submission_key: key, id: x.value.id, last_status: x.value.status })
+        else if (x.reason instanceof ApiError && x.reason.status === 404) missing.add(key)
+      })
+      setLost(missing)
       setList(loadMyReports())
     })
     return () => {
@@ -60,7 +82,11 @@ export default function MyReportsPage() {
               <li key={r.submission_key} className="my-item my-unconfirmed">
                 <div className="my-main">
                   <div className="my-desc">{r.description?.trim() || 'Unsent report'}</div>
-                  <div className="muted small">Not confirmed by server — sending may have failed ({ago(r.created_at)})</div>
+                  <div className="muted small">
+                    {lost.has(r.submission_key)
+                      ? `Server never received this report — remove it and submit again (${ago(r.created_at)})`
+                      : `Not confirmed by server — sending may have failed (${ago(r.created_at)})`}
+                  </div>
                 </div>
                 <button
                   className="btn btn-ghost btn-sm"

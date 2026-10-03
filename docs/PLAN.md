@@ -41,6 +41,8 @@ Times are ISO-8601 strings with timezone.
   `incident_time`. → `202 {id, status}`. Same key + same payload → same `{id,status}` (200). Same key, other payload → 409.
 - `GET /api/reports/{id}` — header `X-Receipt-Token: <token>` → `ReportPublic` (403 on bad token).
 - `GET /api/reports/{id}/photo?token=<receipt_token>` → image bytes.
+- `GET /api/reports/by-key/{submission_key}` — header `X-Receipt-Token: <token>` → `{id, status}`; lets the client
+  recover a report whose submit response was lost. 404 unknown key, 403 bad token, 422 key not a UUID.
 - `GET /api/incidents` → `IncidentMarker[]` = `{id, category, latitude, longitude, incident_time, published_count, max_severity}`
 - `GET /api/incidents/{id}` → `{...IncidentMarker, reports: [{id, description, incident_time, severity, urgency}]}` (published only)
 - `GET /api/health` → `{ok, assessor, mode: "openai"|"replay"|"mock", model, recorded_samples}`

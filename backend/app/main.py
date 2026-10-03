@@ -220,6 +220,25 @@ def get_report_public(report_id: str, x_receipt_token: Optional[str] = Header(No
     return views.report_public(conn, row, public=True)
 
 
+# Lets a client whose submit response was lost (e.g. reload mid-request) recover the report id.
+# Wrong token is 403 like the id-based routes: keys are random client UUIDs, so existence isn't a secret.
+@app.get("/api/reports/by-key/{submission_key}")
+def get_report_by_key(submission_key: str, x_receipt_token: Optional[str] = Header(None),
+                      conn: sqlite3.Connection = Depends(get_conn)):
+    try:
+        submission_key = str(uuid.UUID(submission_key.strip()))
+    except ValueError:
+        _bad("submission_key must be a UUID")
+    row = conn.execute("SELECT id, status, receipt_token_hash FROM report WHERE submission_key = ?",
+                       (submission_key,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "report not found")
+    if not x_receipt_token or not secrets.compare_digest(bytes(row["receipt_token_hash"]),
+                                                         sha256(x_receipt_token.encode())):
+        raise HTTPException(403, "invalid receipt token")
+    return {"id": row["id"], "status": row["status"]}
+
+
 def _photo_response(row):
     if not row["photo_path"]:
         raise HTTPException(404, "report has no photo")

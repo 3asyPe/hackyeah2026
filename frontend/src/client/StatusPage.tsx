@@ -9,8 +9,10 @@ import { fmtCoord, fmtTime } from '../labels'
 
 function intervalFor(s: Status | undefined): number | null {
   if (!s || s === 'processing') return 2500
-  if (s === 'in_review' || s === 'failed') return 5000 // operator may act; keep an eye on it
-  return null
+  // operator may act on these (review critical, retry failed, decide in_review); keep an eye on it
+  if (s === 'in_review' || s === 'failed' || s === 'critical') return 5000
+  if (s === 'published') return 10000 // operators can still retract; rare, so poll slowly
+  return null // rejected is terminal
 }
 
 function groupedLine(n: number) {

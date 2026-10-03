@@ -162,6 +162,22 @@ def route_in_tx(conn, report_id: str, category: str, severity: str, urgency: str
     now = now_iso()
     incident_id = inc["id"]
 
+    if inc["state"] != "provisional" and inc["category"] != category:
+        # Operator re-review changed the category of an already grouped (critical) report -> regroup it.
+        shared = conn.execute("SELECT 1 FROM report WHERE incident_id = ? AND id <> ? LIMIT 1",
+                              (inc["id"], report_id)).fetchone()
+        if shared is None:  # alone: reopen its own incident for grouping
+            conn.execute("UPDATE incident SET state='provisional', category=? WHERE id=?", (category, inc["id"]))
+        else:  # others stay; detach this report into a fresh provisional incident
+            incident_id = new_id()
+            conn.execute(
+                "INSERT INTO incident (id, state, category, latitude, longitude, incident_time, created_at) "
+                "VALUES (?, 'provisional', ?, ?, ?, ?, ?)",
+                (incident_id, category, r["latitude"], r["longitude"], r["incident_time"], now),
+            )
+            conn.execute("UPDATE report SET incident_id=? WHERE id=?", (incident_id, report_id))
+        inc = conn.execute("SELECT * FROM incident WHERE id = ?", (incident_id,)).fetchone()
+
     if inc["state"] == "provisional":
         best = None
         cands = conn.execute(
@@ -186,7 +202,7 @@ def route_in_tx(conn, report_id: str, category: str, severity: str, urgency: str
             incident_id = target
         else:
             conn.execute("UPDATE incident SET state='active', category=? WHERE id=?", (category, inc["id"]))
-    # else: already grouped earlier (e.g. operator re-reviews a critical report) -> keep grouping.
+    # else: already grouped earlier with the same category (e.g. operator re-reviews a critical report) -> keep it.
 
     status = "critical" if (severity == "high" and urgency == "high") else "published"
     conn.execute("UPDATE report SET status=?, updated_at=? WHERE id=?", (status, now, report_id))
