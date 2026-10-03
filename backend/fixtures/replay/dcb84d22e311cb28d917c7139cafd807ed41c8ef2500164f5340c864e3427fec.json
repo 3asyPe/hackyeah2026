@@ -2,29 +2,29 @@
   "key": "dcb84d22e311cb28d917c7139cafd807ed41c8ef2500164f5340c864e3427fec",
   "sample_id": "pothole",
   "model": "gpt-6-luna",
-  "recorded_at": "2026-10-03T17:48:39+00:00",
+  "recorded_at": "2026-10-03T20:04:37+00:00",
   "input": {
     "description": "Huge deep pothole right at the pedestrian crossing, full of muddy water so you can't see how deep it is. Cars swerving to avoid it.",
     "photo_sha256": "0c674f4682dbc88302c853613b406f5065641e510d5ae282f775251342cc80b4"
   },
   "output": {
     "category": "road_hazard",
-    "severity": "high",
+    "severity": "medium",
     "urgency": "high",
     "severity_confidence": {
-      "low": 5.0,
-      "medium": 25.0,
-      "high": 85.0
+      "low": 15.0,
+      "medium": 75.0,
+      "high": 30.0
     },
     "urgency_confidence": {
-      "low": 3.0,
-      "medium": 20.0,
-      "high": 85.0
+      "low": 10.0,
+      "medium": 45.0,
+      "high": 75.0
     },
     "photo_description_match": "matches",
     "scene_plausibility": "no_obvious_concerns",
-    "time_consistency": "suspicious",
+    "time_consistency": "no_obvious_concerns",
     "manipulation_concerns": "no_obvious_concerns",
-    "explanation": "The photo shows a water-filled pothole beside a pedestrian crossing, consistent with the description and posing a potential hazard to pedestrians and vehicles. The reported swerving and location support a prompt response. The photo is brightly lit, which appears inconsistent with the stated local solar time of about 19:08 on October 3 in Kraków."
+    "explanation": "The photo shows a substantial water-filled pothole immediately beside pedestrian-crossing markings, consistent with the description. It could cause vehicle damage or a fall, and the reported swerving near a crossing supports prompt attention. The bright daylight is plausible for the claimed local time, and no clear signs of manipulation are apparent."
   }
 }

@@ -2,7 +2,7 @@
   "key": "9dd4a72346fc36a232e323480ca9b75714c7e711f51ce150cf19063752b36043",
   "sample_id": "overflowing-trash",
   "model": "gpt-6-luna",
-  "recorded_at": "2026-10-03T17:48:47+00:00",
+  "recorded_at": "2026-10-03T20:04:43+00:00",
   "input": {
     "description": "Bins overflowing again, lid won't close and cardboard boxes and rubbish piled all over the pavement next to them. Nobody has collected it for days.",
     "photo_sha256": "21408d89ad608da322981a2762cb8bbc00384bb9a86e6ae701179f898e17bf90"
@@ -13,18 +13,18 @@
     "urgency": "medium",
     "severity_confidence": {
       "low": 15.0,
-      "medium": 78.0,
-      "high": 12.0
+      "medium": 75.0,
+      "high": 10.0
     },
     "urgency_confidence": {
-      "low": 18.0,
-      "medium": 74.0,
-      "high": 14.0
+      "low": 30.0,
+      "medium": 65.0,
+      "high": 5.0
     },
     "photo_description_match": "matches",
     "scene_plausibility": "no_obvious_concerns",
-    "time_consistency": "suspicious",
+    "time_consistency": "no_obvious_concerns",
     "manipulation_concerns": "no_obvious_concerns",
-    "explanation": "The photo shows overflowing bins and cardboard and rubbish piled onto the pavement, matching the description and creating a moderate obstruction and sanitation concern. The scene looks physically plausible, with no obvious signs of image manipulation. The bright daylight appears inconsistent with the claimed local evening time; signage naming Islington also differs from the reported Kraków location, so the photo’s time and location warrant verification."
+    "explanation": "The photo shows an overflowing waste bin and a substantial pile of cardboard and rubbish on the pavement, consistent with the description. The debris may obstruct pedestrians and create a sanitation concern, but no immediate severe danger is visible. The outdoor scene and daylight appear plausible for the claimed local time, with no obvious signs of manipulation."
   }
 }

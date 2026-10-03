@@ -2,7 +2,7 @@
   "key": "5a74afa87ac354d4b8b62196d925d8014d823d8ecd6cbca24a616d1fdccfc703",
   "sample_id": "car-accident",
   "model": "gpt-6-luna",
-  "recorded_at": "2026-10-03T17:48:33+00:00",
+  "recorded_at": "2026-10-03T20:04:30+00:00",
   "input": {
     "description": "Two cars crashed into each other on the street, front of one car is smashed and leaking fluid on the road. Blocking a lane, traffic going around it.",
     "photo_sha256": "1b1bf5712a5c7baa895c9ac1c0fc17e4667d09df3953053dc29083a69a73e917"
@@ -12,19 +12,19 @@
     "severity": "high",
     "urgency": "high",
     "severity_confidence": {
-      "low": 3.0,
-      "medium": 28.0,
-      "high": 78.0
+      "low": 5.0,
+      "medium": 20.0,
+      "high": 90.0
     },
     "urgency_confidence": {
-      "low": 1.0,
-      "medium": 14.0,
-      "high": 88.0
+      "low": 3.0,
+      "medium": 12.0,
+      "high": 92.0
     },
     "photo_description_match": "matches",
     "scene_plausibility": "no_obvious_concerns",
-    "time_consistency": "suspicious",
+    "time_consistency": "no_obvious_concerns",
     "manipulation_concerns": "no_obvious_concerns",
-    "explanation": "The photo shows two damaged cars, a substantial fluid spill, and an apparent lane obstruction, consistent with the description and creating an immediate traffic hazard. The damage and spill present significant potential harm, so a prompt response is warranted. The scene looks physically plausible, but its bright daylight appearance seems inconsistent with the claimed local solar time of 19:08."
+    "explanation": "The photo shows two cars, substantial front-end damage, and fluid or other liquid spread across the roadway, consistent with the report. The damaged vehicles and spill create a significant traffic and safety hazard requiring prompt attention; daylight is consistent with the claimed local time, and no obvious scene or manipulation concerns are visible."
   }
 }

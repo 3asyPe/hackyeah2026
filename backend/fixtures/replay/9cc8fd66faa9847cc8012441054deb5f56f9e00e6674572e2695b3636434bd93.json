@@ -2,7 +2,7 @@
   "key": "9cc8fd66faa9847cc8012441054deb5f56f9e00e6674572e2695b3636434bd93",
   "sample_id": "fire-building",
   "model": "gpt-6-luna",
-  "recorded_at": "2026-10-03T17:48:26+00:00",
+  "recorded_at": "2026-10-03T20:04:25+00:00",
   "input": {
     "description": "Big fire in an old brick building, flames coming out of the roof and top windows, tons of black smoke. Fire brigade just got here but it's spreading fast!!",
     "photo_sha256": "4e6f9b2bf3fa55200475989446108a79312728216469f74360168e7cb59c6b2e"
@@ -13,18 +13,18 @@
     "urgency": "high",
     "severity_confidence": {
       "low": 1.0,
-      "medium": 4.0,
-      "high": 96.0
+      "medium": 2.0,
+      "high": 98.0
     },
     "urgency_confidence": {
       "low": 1.0,
-      "medium": 3.0,
-      "high": 97.0
+      "medium": 2.0,
+      "high": 98.0
     },
     "photo_description_match": "matches",
     "scene_plausibility": "no_obvious_concerns",
-    "time_consistency": "suspicious",
+    "time_consistency": "no_obvious_concerns",
     "manipulation_concerns": "no_obvious_concerns",
-    "explanation": "The photo shows a large, actively spreading building fire with heavy smoke, consistent with the description and indicating high potential harm and need for rapid response. The scene appears physically plausible, with no obvious signs of editing. Its bright daylight appearance seems inconsistent with the claimed local solar time of 19:08 in early October, so the timing merits verification."
+    "explanation": "The photo shows a large building fire with flames spreading across the roof and exterior, heavy smoke, and firefighters responding, matching the description. The visible fire poses an immediate risk of severe harm and property damage. Daylight conditions are consistent with the claimed local time; the image appears physically plausible, though the photo alone cannot verify the reported location or time."
   }
 }

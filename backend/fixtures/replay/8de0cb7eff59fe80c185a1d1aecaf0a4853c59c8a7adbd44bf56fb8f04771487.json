@@ -2,7 +2,7 @@
   "key": "8de0cb7eff59fe80c185a1d1aecaf0a4853c59c8a7adbd44bf56fb8f04771487",
   "sample_id": "graffiti-bench",
   "model": "gpt-6-luna",
-  "recorded_at": "2026-10-03T17:49:04+00:00",
+  "recorded_at": "2026-10-03T20:05:00+00:00",
   "input": {
     "description": "Someone sprayed graffiti all over the bench by the path in the park. Not urgent, just looks bad.",
     "photo_sha256": "05f80d38c2ee8a44c3ae478f78cd7d03cbeea1b8d127855122f6385c07f3e98f"
@@ -12,19 +12,19 @@
     "severity": "low",
     "urgency": "low",
     "severity_confidence": {
-      "low": 90.0,
+      "low": 91.0,
       "medium": 15.0,
       "high": 2.0
     },
     "urgency_confidence": {
-      "low": 85.0,
-      "medium": 15.0,
-      "high": 1.0
+      "low": 88.0,
+      "medium": 18.0,
+      "high": 2.0
     },
     "photo_description_match": "matches",
     "scene_plausibility": "no_obvious_concerns",
-    "time_consistency": "suspicious",
+    "time_consistency": "no_obvious_concerns",
     "manipulation_concerns": "no_obvious_concerns",
-    "explanation": "The photo shows blue spray-painted graffiti on a park bench, consistent with the description; it appears to be cosmetic damage without an apparent immediate safety hazard. The scene looks physically plausible, but the bright sunlight and strong shadows seem inconsistent with the claimed local solar time of 19:08. No obvious signs of image manipulation are apparent."
+    "explanation": "The photo shows blue spray-painted graffiti on a park bench, consistent with the description. The visible damage appears cosmetic and does not suggest an immediate safety hazard, so severity and urgency are assessed as low. The daylight and shadows are plausible for the claimed local time, and no obvious scene or manipulation concerns are visible."
   }
 }
