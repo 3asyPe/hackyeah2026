@@ -34,7 +34,7 @@ def test_replay_first_network_failure_falls_back_to_mock(monkeypatch, code):
     monkeypatch.setattr(assessor, "_assess_openai", _raises(code))
     out, label = assessor.assess(_inp())
     assert label == "mock"
-    assert "network failure" in out.explanation
+    assert "timed out or was unreachable" in out.explanation
 
 
 def test_replay_first_other_error_propagates(monkeypatch):
@@ -76,3 +76,25 @@ def test_reset_demo_requires_yes(monkeypatch, tmp_path, capsys):
     assert reset_demo.main([]) == 1
     assert "stop the backend" in capsys.readouterr().out.lower()
     assert not (tmp_path / "t.db").exists()
+
+
+def test_replay_first_openai_client_has_no_retries(monkeypatch):
+    import openai
+    seen = {}
+
+    class Boom(Exception):
+        pass
+
+    class FakeClient:
+        def __init__(self, **kw):
+            seen.update(kw)
+            raise Boom
+
+    monkeypatch.setattr(openai, "OpenAI", FakeClient)
+    with pytest.raises(Boom):
+        assessor._assess_openai(_inp(), timeout=7)
+    assert seen["max_retries"] == 0 and seen["timeout"] == 7
+    seen.clear()
+    with pytest.raises(Boom):
+        assessor._assess_openai(_inp())
+    assert seen["max_retries"] == 1

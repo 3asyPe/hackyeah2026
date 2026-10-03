@@ -6,7 +6,7 @@ routes the report:
 
 - **published**: grouped with nearby similar reports and shown on the public map
 - **critical** (high severity and high urgency): goes to the operator queue as a simulated 112 escalation
-- **in_review**: held for an operator when the photo and description don't match or the model is unsure
+- **in_review**: held for an operator when the photo and description don't match, the photo looks suspicious (implausible scene or signs of manipulation), or the model is unsure (low confidence)
 - **failed**: the model call failed; an operator can retry it
 
 Stack: FastAPI + SQLite, React (Vite), OpenAI. The data model is in [docs/erd-v1.md](docs/erd-v1.md) and the API
@@ -52,4 +52,5 @@ The mock picks the outcome from keywords in the description:
 - `fire` → critical
 - `trash` → published
 - `mismatch` → in_review
+- `fake` with a photo → in_review (suspicious photo)
 - `flaky` → fails once, so you can show a retry

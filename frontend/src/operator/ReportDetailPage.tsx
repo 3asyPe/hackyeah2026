@@ -155,7 +155,7 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
         <h3>Operator decision</h3>
         <StatusChip status={r.status} />
       </header>
-      {r.review_reason && (
+      {r.review_reason && !canRetract && (
         <div className="alert alert-warn">
           <strong>Why it is here</strong>
           <span>{humanize(r.review_reason)}</span>

@@ -178,7 +178,8 @@ def _assess_openai(inp: AssessInput, timeout: Optional[float] = None) -> Assessm
     import openai
     from openai import OpenAI
 
-    client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=timeout or config.OPENAI_TIMEOUT_S, max_retries=1)
+    client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=timeout or config.OPENAI_TIMEOUT_S,
+                    max_retries=0 if timeout else 1)
 
     text = (
         f"Incident location: latitude {inp.latitude:.6f}, longitude {inp.longitude:.6f}.\n"
@@ -276,7 +277,7 @@ def _assess_mock(inp: AssessInput, replay_miss: bool = False, network_failure: b
     manip = "suspicious" if ("fake" in d and has_photo) else check
 
     if network_failure:
-        why = "No real model answered because of a network failure (OpenAI unreachable), so replay_first fell back to the mock."
+        why = "No real model answered because OpenAI timed out or was unreachable, so replay_first fell back to the mock."
     elif replay_miss:
         why = "No real model was called: this report does not match a recorded sample, so replay fell back to the mock."
     elif config.OPENAI_API_KEY:

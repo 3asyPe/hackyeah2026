@@ -77,12 +77,12 @@ def report_summary(row, public: bool = False) -> dict:
 
 def report_public(conn, row, public: bool = True) -> dict:
     d = report_summary(row, public=public)
-    a = None
-    if row["current_assessment_id"]:
-        a = conn.execute("SELECT * FROM assessment WHERE id = ?", (row["current_assessment_id"],)).fetchone()
     if public:
         d["review_reason"] = None
     else:
+        a = None
+        if row["current_assessment_id"]:
+            a = conn.execute("SELECT * FROM assessment WHERE id = ?", (row["current_assessment_id"],)).fetchone()
         d["current_assessment"] = assessment_json(a) if a else None
     s = conn.execute("SELECT * FROM notification_simulation WHERE report_id = ?", (row["id"],)).fetchone()
     d["simulation"] = simulation_json(s)

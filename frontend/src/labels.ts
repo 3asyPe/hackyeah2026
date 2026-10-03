@@ -68,9 +68,14 @@ export const levelLabel = (l: Level | null | undefined) => (l ? LEVEL_LABEL[l] ?
 /** humanize free-text machine reasons like "photo_description_mismatch" */
 export function humanize(s: string | null | undefined): string {
   if (!s) return ''
-  if (/\s/.test(s)) return s
-  const t = s.replace(/[_-]+/g, ' ').trim()
-  return t.charAt(0).toUpperCase() + t.slice(1)
+  return s
+    .split(', ')
+    .map((p) => {
+      if (/\s/.test(p)) return p
+      const t = p.replace(/[_-]+/g, ' ').trim()
+      return t.charAt(0).toUpperCase() + t.slice(1)
+    })
+    .join(', ')
 }
 
 const dtf = new Intl.DateTimeFormat(undefined, {
