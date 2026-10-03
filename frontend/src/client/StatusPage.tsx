@@ -10,9 +10,8 @@ import { fmtCoord, fmtTime } from '../labels'
 function intervalFor(s: Status | undefined): number | null {
   if (!s || s === 'processing') return 2500
   // operator may act on these (review critical, retry failed, decide in_review); keep an eye on it
-  if (s === 'in_review' || s === 'failed') return 5000
-  // a published/critical report can still be retracted or decided live; poll slowly
-  if (s === 'published' || s === 'critical') return 10000
+  if (s === 'in_review' || s === 'failed' || s === 'critical') return 5000
+  if (s === 'published') return 10000 // operators can still retract; rare, so poll slowly
   return null // rejected is terminal
 }
 
