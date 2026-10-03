@@ -988,6 +988,42 @@ select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* privacy */
+.privacy-note {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.privacy-note a,
+.disclaimer a {
+  color: inherit;
+  text-decoration: underline;
+}
+.privacy ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.privacy h3 {
+  margin: 0;
+}
+.delete-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btn-danger {
+  background: var(--surface);
+  color: var(--high);
+  border: 1.5px solid var(--high);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--high-soft);
+}
+
 .my-unconfirmed {
   border-style: dashed;
   background: transparent;

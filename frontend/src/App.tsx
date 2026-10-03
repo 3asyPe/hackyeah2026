@@ -4,6 +4,7 @@ import SubmitPage from './client/SubmitPage'
 import StatusPage from './client/StatusPage'
 import MapPage from './client/MapPage'
 import MyReportsPage from './client/MyReportsPage'
+import PrivacyPage from './client/PrivacyPage'
 import OperatorLayout from './operator/OperatorLayout'
 import OverviewPage from './operator/OverviewPage'
 import QueuePage from './operator/QueuePage'
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="r/:id" element={<StatusPage />} />
         <Route path="map" element={<MapPage />} />
         <Route path="my" element={<MyReportsPage />} />
+        <Route path="privacy" element={<PrivacyPage />} />
       </Route>
       <Route path="operator" element={<OperatorLayout />}>
         <Route index element={<OverviewPage />} />

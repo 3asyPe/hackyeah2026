@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { ApiError, fetchSamplePhoto, getSamples, isNetworkError, submitReport } from '../api'
 import type { Sample, SubmitPayload } from '../api'
@@ -421,6 +421,12 @@ export default function SubmitPage() {
           <span>You can still submit, but an operator will need to review it manually.</span>
         </div>
       )}
+
+      <p className="privacy-note">
+        Please avoid faces, licence plates and names. Photos lose their GPS and device data on upload, are analysed by
+        AI and are deleted automatically after a while. You can delete your report at any time.{' '}
+        <Link to="/privacy">How we use your data</Link>
+      </p>
 
       <ErrorBox
         error={error}

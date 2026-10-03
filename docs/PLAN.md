@@ -39,10 +39,14 @@ Times are ISO-8601 strings with timezone.
 - `POST /api/reports` — multipart: `submission_key` (uuid, client-generated), `receipt_token` (random string,
   client-generated, ≥16 chars), `description?`, `photo?` (jpeg/png/webp ≤10 MB), `latitude`, `longitude`,
   `incident_time`. → `202 {id, status}`. Same key + same payload → same `{id,status}` (200). Same key, other payload → 409.
+  A photo that carries metadata (EXIF/GPS, XMP, IPTC, comments) is stored re-encoded without it; others byte-for-byte.
 - `GET /api/reports/{id}` — header `X-Receipt-Token: <token>` → `ReportPublic` (403 on bad token).
 - `GET /api/reports/{id}/photo?token=<receipt_token>` → image bytes.
+- `DELETE /api/reports/{id}` — header `X-Receipt-Token` → 204. Deletes the report, photo, assessments, reviews,
+  simulation and any incident left without reports. 403 bad token, 404 unknown, 409 while `processing`.
 - `GET /api/incidents` → `IncidentMarker[]` = `{id, category, latitude, longitude, incident_time, published_count, max_severity}`
-- `GET /api/incidents/{id}` → `{...IncidentMarker, reports: [{id, description, incident_time, severity, urgency}]}` (published only)
+- `GET /api/incidents/{id}` → `{...IncidentMarker, reports: [{id, incident_time, severity, urgency}]}` (published only; no description or photo)
+- `GET /api/privacy` → `{retention_days, rejected_retention_days, assessor_mode}` (shown on the privacy notice)
 - `GET /api/health` → `{ok, assessor, mode: "openai"|"replay"|"mock", model, recorded_samples}`
 - `GET /api/samples` → `[{id, title, description, photo_url, latitude, longitude, credit, recorded}]` bundled demo
   reports (`backend/samples/`); `recorded` = a replay fixture exists. `GET /api/samples/{id}/photo` → the raw file
