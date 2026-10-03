@@ -5,6 +5,7 @@ import { useOpPoll } from './ctx'
 import { ErrorBox, Spinner } from '../components/ui'
 import { CATEGORY_ICON, ago, catLabel, fmtCoord, fmtTime, shortId } from '../labels'
 import { useNow } from '../hooks'
+import PhoneQrCard from './PhoneQrCard'
 
 const COUNTERS: { k: keyof Summary; label: string; tone: string; to?: string }[] = [
   { k: 'critical', label: 'Critical', tone: 'critical', to: '/operator/critical' },
@@ -52,6 +53,8 @@ export default function OverviewPage() {
         })}
       </div>
       {summary.error != null && <ErrorBox error={summary.error} title="Summary unavailable" />}
+
+      <PhoneQrCard />
 
       <section className="card">
         <header className="card-head">

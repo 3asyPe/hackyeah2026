@@ -31,6 +31,8 @@ cd frontend
 npm install && npm run dev
 ```
 
+`npm run dev:https` serves over HTTPS (self-signed) so phones on the LAN can use geolocation.
+
 - Client: http://localhost:5173
 - Operator: http://localhost:5173/operator (token `demo`)
 

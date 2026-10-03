@@ -1840,3 +1840,7 @@ a.counter:hover {
   align-self: flex-start;
   margin-left: 0;
 }
+
+.qr-body { display: flex; gap: 16px; align-items: center; padding: 16px; flex-wrap: wrap; }
+.qr-body img { border-radius: 8px; background: #fff; }
+.qr-hint { margin: 8px 0 0; max-width: 46ch; }
