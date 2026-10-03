@@ -1786,6 +1786,10 @@ a.counter:hover {
   text-align: center;
   pointer-events: none;
 }
+.map-full .map-offline-note {
+  top: auto;
+  bottom: 32px;
+}
 
 @media (max-width: 900px) {
   .op {
