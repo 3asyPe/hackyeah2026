@@ -176,6 +176,13 @@ def route_in_tx(conn, report_id: str, category: str, severity: str, urgency: str
                 (incident_id, category, r["latitude"], r["longitude"], r["incident_time"], now),
             )
             conn.execute("UPDATE report SET incident_id=? WHERE id=?", (incident_id, report_id))
+            # take along the report's own merged stub, so deleting the report still finds and removes it
+            conn.execute(
+                "UPDATE incident SET merged_into_id=? WHERE rowid = (SELECT rowid FROM incident WHERE state = 'merged' "
+                "AND merged_into_id = ? AND latitude = ? AND longitude = ? AND incident_time = ? "
+                "AND NOT EXISTS (SELECT 1 FROM report WHERE incident_id = incident.id) LIMIT 1)",
+                (incident_id, inc["id"], r["latitude"], r["longitude"], r["incident_time"]),
+            )
         inc = conn.execute("SELECT * FROM incident WHERE id = ?", (incident_id,)).fetchone()
 
     if inc["state"] == "provisional":
@@ -198,6 +205,8 @@ def route_in_tx(conn, report_id: str, category: str, severity: str, urgency: str
             target = best[1]
             conn.execute("UPDATE incident SET state='merged', merged_into_id=?, category=? WHERE id=?",
                          (target, category, inc["id"]))
+            # a reopened incident may have stubs merged into it: re-point them so merges never chain
+            conn.execute("UPDATE incident SET merged_into_id=? WHERE merged_into_id=?", (target, inc["id"]))
             conn.execute("UPDATE report SET incident_id=? WHERE id=?", (target, report_id))
             incident_id = target
         else:

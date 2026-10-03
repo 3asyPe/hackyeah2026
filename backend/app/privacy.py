@@ -72,13 +72,17 @@ def delete_report_in_tx(conn, report_id: str) -> str | None:
         "AND NOT EXISTS (SELECT 1 FROM incident m WHERE m.merged_into_id = incident.id) LIMIT 1)",
         (r["incident_id"], r["latitude"], r["longitude"], r["incident_time"]),
     )
-    # The incident itself goes once its last report is gone (stubs merged into it go with it).
+    # The incident itself goes once its last report is gone, with the stubs merged into it. Leaves first: databases
+    # from before routing re-pointed merges can hold chains (stub -> merged -> incident).
     if conn.execute("SELECT 1 FROM report WHERE incident_id = ?", (r["incident_id"],)).fetchone() is None:
-        conn.execute("DELETE FROM notification_simulation WHERE incident_id = ?", (r["incident_id"],))
-        conn.execute("DELETE FROM incident WHERE merged_into_id = ? "
-                     "AND NOT EXISTS (SELECT 1 FROM report WHERE incident_id = incident.id)", (r["incident_id"],))
-        if conn.execute("SELECT 1 FROM incident WHERE merged_into_id = ?", (r["incident_id"],)).fetchone() is None:
-            conn.execute("DELETE FROM incident WHERE id = ?", (r["incident_id"],))
+        tree = [row[0] for row in conn.execute(
+            "WITH RECURSIVE t(id) AS (SELECT ? UNION SELECT i.id FROM incident i JOIN t ON i.merged_into_id = t.id) "
+            "SELECT id FROM t", (r["incident_id"],))]
+        for iid in reversed(tree):  # breadth-first order reversed: children before their parent
+            if conn.execute("SELECT 1 FROM report WHERE incident_id = ? UNION ALL "
+                            "SELECT 1 FROM incident WHERE merged_into_id = ?", (iid, iid)).fetchone() is None:
+                conn.execute("DELETE FROM notification_simulation WHERE incident_id = ?", (iid,))
+                conn.execute("DELETE FROM incident WHERE id = ?", (iid,))
     return r["photo_path"]
 
 
@@ -103,11 +107,15 @@ def purge_expired(now: datetime | None = None) -> int:
             ids = [row["id"] for row in conn.execute(f"SELECT id FROM report WHERE {where} AND updated_at < ?",
                                                       (cutoff,))]
             for rid in ids:
-                with GROUP_LOCK, tx(conn):
-                    # re-check inside the transaction: the report may have changed since the SELECT
-                    still = conn.execute(f"SELECT 1 FROM report WHERE id = ? AND {where} AND updated_at < ?",
-                                         (rid, cutoff)).fetchone()
-                    photo = delete_report_in_tx(conn, rid) if still else None
+                try:
+                    with GROUP_LOCK, tx(conn):
+                        # re-check inside the transaction: the report may have changed since the SELECT
+                        still = conn.execute(f"SELECT 1 FROM report WHERE id = ? AND {where} AND updated_at < ?",
+                                             (rid, cutoff)).fetchone()
+                        photo = delete_report_in_tx(conn, rid) if still else None
+                except Exception:  # rolled back; one bad row must not block the rest on every run
+                    log.exception("Retention: failed to delete report %s", rid)
+                    continue
                 if still:
                     unlink_photo(photo)
                     n += 1
