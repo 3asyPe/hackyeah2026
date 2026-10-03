@@ -1,6 +1,8 @@
 """Record real OpenAI assessments of the bundled samples into fixtures/replay/ for the replay assessor.
 
-Run: .venv/bin/python -m app.record_fixtures [--only id,id] [--force]   (needs OPENAI_API_KEY; costs API calls)
+Run: .venv/bin/python -m app.record_fixtures [--only id,id] [--force] [--at ISO8601]   (needs OPENAI_API_KEY; costs API calls)
+--at sets the incident_time sent to the model (default: now, UTC; no timezone = UTC), e.g. re-record at local noon
+so time_consistency is not "suspicious": --force --at 2026-10-03T12:00:00+02:00
 """
 from __future__ import annotations
 
@@ -18,7 +20,9 @@ from .processing import review_reasons
 def _route(out) -> str:
     """Where processing.py would send this output (same review rules, then critical vs published)."""
     row = {"photo_description_match": out.photo_description_match, "category": out.category,
-           "severity": out.severity, "urgency": out.urgency}
+           "severity": out.severity, "urgency": out.urgency,
+           "scene_plausibility": out.scene_plausibility, "time_consistency": out.time_consistency,
+           "manipulation_concerns": out.manipulation_concerns}
     for name, conf in (("severity", out.severity_confidence), ("urgency", out.urgency_confidence)):
         for lvl in ("low", "medium", "high"):
             row[f"{name}_{lvl}_confidence"] = getattr(conf, lvl) if conf else None
@@ -31,7 +35,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--only", help="comma-separated sample ids")
     ap.add_argument("--force", action="store_true", help="re-record samples that already have a fixture")
+    ap.add_argument("--at", help="incident time to send to the model (ISO 8601; default now, UTC)")
     args = ap.parse_args()
+    at = None
+    if args.at:
+        at = datetime.fromisoformat(args.at.replace("Z", "+00:00"))
+        at = (at if at.tzinfo else at.replace(tzinfo=timezone.utc)).isoformat(timespec="seconds")
     if not config.OPENAI_API_KEY:
         print("OPENAI_API_KEY is not set (env or backend/.env); nothing recorded.", file=sys.stderr)
         return 2
@@ -67,7 +76,7 @@ def main() -> int:
             photo_path=str(photo) if photo else None,
             photo_media_type=samples.MEDIA_TYPES[photo.suffix.lower()] if photo else None,
             latitude=float(s["latitude"]), longitude=float(s["longitude"]),
-            incident_time=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            incident_time=at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
         )
         try:
             out = _normalize(_assess_openai(inp), photo is not None, desc is not None)

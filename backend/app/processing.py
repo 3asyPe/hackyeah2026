@@ -43,8 +43,13 @@ def _has_conf_tie(row, prefix: str) -> bool:
     return sum(1 for v in vals if v == m) > 1
 
 
+def _low_top_conf(row, prefix: str) -> bool:
+    vals = [row[f"{prefix}_{lvl}_confidence"] for lvl in LEVELS]
+    return all(v is not None for v in vals) and max(vals) < config.MIN_TOP_CONFIDENCE
+
+
 def review_reasons(a: sqlite3.Row) -> list[str]:
-    """ERD §8.5: mismatch, undetermined classification, confidence tie => in_review."""
+    """ERD §8.5: mismatch, undetermined classification, confidence tie, suspicious photo, low confidence => in_review."""
     reasons = []
     if a["photo_description_match"] == "mismatches":
         reasons.append("photo_description_mismatch")
@@ -62,6 +67,10 @@ def review_reasons(a: sqlite3.Row) -> list[str]:
         reasons.append("severity_confidence_tie")
     if _has_conf_tie(a, "urgency"):
         reasons.append("urgency_confidence_tie")
+    if a["scene_plausibility"] == "suspicious" or a["manipulation_concerns"] == "suspicious":
+        reasons.append("suspicious_photo")
+    if _low_top_conf(a, "severity") or _low_top_conf(a, "urgency"):
+        reasons.append("low_confidence")
     return reasons
 
 
