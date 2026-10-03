@@ -22,13 +22,15 @@ SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 OPENAI_TIMEOUT_S = _f("OPENAI_TIMEOUT_S", 60)
+REPLAY_FIRST_TIMEOUT_S = _f("REPLAY_FIRST_TIMEOUT_S", 15)  # OpenAI client timeout in replay_first mode only
 PROMPT_VERSION = "v1"
 MOCK_DELAY_S = _f("MOCK_DELAY_S", 1.0)  # also applied to replay hits, so "Processing" stays visible
 
 # auto -> openai when a key is set, else replay (recorded fixtures, keyword mock on a miss)
+# replay_first -> recorded fixtures first, live OpenAI on a miss (mock only if the network fails)
 ASSESSOR = os.getenv("ASSESSOR", "auto").strip().lower() or "auto"
-if ASSESSOR not in ("auto", "openai", "replay", "mock"):
-    raise ValueError(f"ASSESSOR must be auto, openai, replay or mock (got {ASSESSOR!r})")
+if ASSESSOR not in ("auto", "openai", "replay", "replay_first", "mock"):
+    raise ValueError(f"ASSESSOR must be auto, openai, replay, replay_first or mock (got {ASSESSOR!r})")
 ASSESSOR_MODE = ("openai" if OPENAI_API_KEY else "replay") if ASSESSOR == "auto" else ASSESSOR
 
 OPERATOR_TOKEN = os.getenv("OPERATOR_TOKEN", "demo").strip() or "demo"

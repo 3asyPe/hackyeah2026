@@ -47,6 +47,12 @@ export function AiModeBadge({ health, dark = false }: { health: Health | null; d
         `${health.recorded_samples ? ` (${health.recorded_samples} recorded)` : ''}; ` +
         'any other photo or description is assessed by a simple keyword mock.'
       break
+    case 'replay_first':
+      text = `AI: recorded samples + live ${model ?? 'OpenAI'}`
+      title =
+        `The bundled sample reports replay recorded output${health.recorded_samples ? ` (${health.recorded_samples} recorded)` : ''}; ` +
+        `any other report is assessed live by ${model ?? 'OpenAI'}.`
+      break
     case 'mock':
       text = 'AI: keyword mock'
       title = 'No AI model configured. Reports are classified by a simple keyword heuristic.'
@@ -55,7 +61,7 @@ export function AiModeBadge({ health, dark = false }: { health: Health | null; d
       return null
   }
   return (
-    <span className={`ai-badge ai-${health.mode} ${dark ? 'ai-badge-dark' : ''}`} title={title}>
+    <span className={`ai-badge ai-${health.mode === 'replay_first' ? 'replay' : health.mode} ${dark ? 'ai-badge-dark' : ''}`} title={title}>
       <span className="ai-dot" aria-hidden />
       {text}
     </span>

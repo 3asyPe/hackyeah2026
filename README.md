@@ -44,8 +44,8 @@ other report goes to a keyword mock, and its explanation says so. `assessment.mo
 To try it, open the client, pick a card under **Try a sample** on the Report page and submit. The badge at the top shows
 which assessor is active. Sample photos are from Wikimedia Commons; the credits are in `backend/samples/samples.json`.
 
-`ASSESSOR` in `.env` picks the mode: `auto` (default: `openai` with a key, otherwise `replay`), `openai`, `replay` or
-`mock`. To re-record the samples with a key, run `.venv/bin/python -m app.record_fixtures [--only id,id] [--force]`.
+`ASSESSOR` in `.env` picks the mode: `auto` (default: `openai` with a key, otherwise `replay`), `openai`, `replay`, `replay_first`
+(samples replay, anything else goes to OpenAI; needs a key, falls back to the mock on a network failure) or `mock`. Reset before a demo: `.venv/bin/python -m app.reset_demo --yes` (backend stopped). To re-record the samples with a key, run `.venv/bin/python -m app.record_fixtures [--only id,id] [--force]`.
 
 The mock picks the outcome from keywords in the description:
 

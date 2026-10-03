@@ -279,7 +279,7 @@ export const getIncident = (id: string) =>
 
 // ---------------------------------------------------------------- health & samples
 
-export type AssessorMode = 'openai' | 'replay' | 'mock'
+export type AssessorMode = 'openai' | 'replay' | 'replay_first' | 'mock'
 
 export interface Health {
   ok: boolean

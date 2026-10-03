@@ -37,7 +37,7 @@ SEEDS = [
     ("pub-6", "Damaged bench and graffiti in the park, glass on the playground.",
      50.0790, 19.9620, 60, "other", "low", "low", "published", {}),
     ("crit-1", "Smoke pouring out of an apartment building window, people on the balcony.",
-     50.0650, 19.9200, 10, "fire_smoke", "high", "high", "critical", {}),
+     50.0832, 19.9013, 10, "fire_smoke", "high", "high", "critical", {}),
     ("rev-1", "mismatch: description says flooded underpass but photo shows a dry street.",
      50.0580, 19.9550, 25, "infrastructure_damage", "medium", "medium", "in_review",
      {"match": "mismatches", "reason": "photo_description_mismatch"}),

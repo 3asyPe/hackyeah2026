@@ -32,14 +32,15 @@ PIL_TYPES = {"JPEG": ("image/jpeg", "jpg"), "PNG": ("image/png", "png"), "WEBP":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if config.ASSESSOR_MODE == "openai" and not config.OPENAI_API_KEY:
-        raise RuntimeError("ASSESSOR=openai requires OPENAI_API_KEY (or use ASSESSOR=auto/replay/mock)")
+    if config.ASSESSOR_MODE in ("openai", "replay_first") and not config.OPENAI_API_KEY:
+        raise RuntimeError("ASSESSOR=openai/replay_first requires OPENAI_API_KEY (or use ASSESSOR=auto/replay/mock)")
     init_db()
     n = recover_interrupted()
     if n:
         log.warning("Marked %d interrupted report(s) as failed", n)
     mode = config.ASSESSOR_MODE
     log.info("Assessor: %s", {"openai": f"OpenAI {config.OPENAI_MODEL}",
+                              "replay_first": f"REPLAY of recorded samples first, live OpenAI {config.OPENAI_MODEL} otherwise",
                               "replay": "REPLAY of recorded samples (keyword mock otherwise)",
                               "mock": "MOCK (keyword-based)"}[mode])
     yield
@@ -61,7 +62,7 @@ def _bad(msg: str, code: int = 422):
 @app.get("/api/health")
 def health():
     recorded = [f for s in samples.load() if (f := samples.fixture(s)) is not None]
-    if config.ASSESSOR_MODE == "openai":
+    if config.ASSESSOR_MODE in ("openai", "replay_first"):
         model = config.OPENAI_MODEL
     elif config.ASSESSOR_MODE == "replay":
         model = ", ".join(sorted({str(f.get("model")) for f in recorded})) or None

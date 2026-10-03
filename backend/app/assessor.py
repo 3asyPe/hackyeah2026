@@ -140,8 +140,16 @@ def assess(inp: AssessInput) -> tuple[AssessmentOutput, str]:
         if not config.OPENAI_API_KEY:
             raise AssessmentError("config_error", "ASSESSOR=openai but OPENAI_API_KEY is not set")
         out, label = _assess_openai(inp), config.OPENAI_MODEL
-    elif mode == "replay" and (hit := _assess_replay(inp)) is not None:
+    elif mode in ("replay", "replay_first") and (hit := _assess_replay(inp)) is not None:
         out, label = hit
+    elif mode == "replay_first":
+        try:
+            out, label = _assess_openai(inp, timeout=config.REPLAY_FIRST_TIMEOUT_S), config.OPENAI_MODEL
+        except AssessmentError as e:
+            if e.code not in ("timeout", "api_connection"):
+                raise
+            log.warning("replay_first: OpenAI unreachable (%s), using the mock", e.code)
+            out, label = _assess_mock(inp, network_failure=True), "mock"
     else:
         out, label = _assess_mock(inp, replay_miss=mode == "replay"), "mock"
     return _normalize(out, has_photo, has_desc), label
@@ -166,11 +174,11 @@ def _assess_replay(inp: AssessInput) -> Optional[tuple[AssessmentOutput, str]]:
 
 
 # ---------------------------------------------------------------- OpenAI
-def _assess_openai(inp: AssessInput) -> AssessmentOutput:
+def _assess_openai(inp: AssessInput, timeout: Optional[float] = None) -> AssessmentOutput:
     import openai
     from openai import OpenAI
 
-    client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=config.OPENAI_TIMEOUT_S, max_retries=1)
+    client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=timeout or config.OPENAI_TIMEOUT_S, max_retries=1)
 
     text = (
         f"Incident location: latitude {inp.latitude:.6f}, longitude {inp.longitude:.6f}.\n"
@@ -234,7 +242,7 @@ def _conf(level: Optional[str], tie: bool = False) -> Optional[Confidence]:
     return table[level]
 
 
-def _assess_mock(inp: AssessInput, replay_miss: bool = False) -> AssessmentOutput:
+def _assess_mock(inp: AssessInput, replay_miss: bool = False, network_failure: bool = False) -> AssessmentOutput:
     if config.MOCK_DELAY_S > 0:
         time.sleep(config.MOCK_DELAY_S)
     d = (inp.description or "").lower()
@@ -267,7 +275,9 @@ def _assess_mock(inp: AssessInput, replay_miss: bool = False) -> AssessmentOutpu
     check = "no_obvious_concerns" if has_photo else "not_applicable"
     manip = "suspicious" if ("fake" in d and has_photo) else check
 
-    if replay_miss:
+    if network_failure:
+        why = "No real model answered because of a network failure (OpenAI unreachable), so replay_first fell back to the mock."
+    elif replay_miss:
         why = "No real model was called: this report does not match a recorded sample, so replay fell back to the mock."
     elif config.OPENAI_API_KEY:
         why = "No real model was called (ASSESSOR=mock)."
