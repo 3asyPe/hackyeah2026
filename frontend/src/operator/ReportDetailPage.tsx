@@ -88,6 +88,7 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
   const [error, setError] = useState<unknown>(null)
 
   const canDecide = r.status === 'in_review' || r.status === 'critical' || r.status === 'failed'
+  const canRetract = r.status === 'published'
   const canRetry = r.status === 'failed'
   const willBeCritical = severity === 'high' && urgency === 'high'
 
@@ -135,7 +136,7 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
           : 'Request failed'
       : 'Check the form'
 
-  if (!canDecide) {
+  if (!canDecide && !canRetract) {
     return (
       <section className="card decision decision-closed">
         <header className="card-head"><h3>Decision</h3></header>
@@ -161,6 +162,7 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
         </div>
       )}
       <div className="form-grid">
+        {!canRetract && (<>
         <label className="op-label">
           Category
           <select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
@@ -190,6 +192,7 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
         {willBeCritical && (
           <div className="hint hint-bad">High + high → approving routes this report as <strong>critical</strong> (simulated 112).</div>
         )}
+        </>)}
         <label className="op-label">
           Operator label
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. op-anna" />
@@ -201,13 +204,18 @@ function DecisionPanel({ r, onDone }: { r: ReportDetail; onDone: (d: ReportDetai
       </div>
       <ErrorBox error={error} title={errTitle} />
       <div className="decision-actions">
-        <button className="btn btn-approve" disabled={!!busy} onClick={() => run('approve')}>
-          {busy === 'approve' ? <Spinner size={16} /> : '✓'} Approve
-        </button>
+        {!canRetract && (
+          <button className="btn btn-approve" disabled={!!busy} onClick={() => run('approve')}>
+            {busy === 'approve' ? <Spinner size={16} /> : '✓'} Approve
+          </button>
+        )}
         <button className="btn btn-reject" disabled={!!busy} onClick={() => run('reject')}>
-          {busy === 'reject' ? <Spinner size={16} /> : '✕'} Reject
+          {busy === 'reject' ? <Spinner size={16} /> : '✕'} {canRetract ? 'Retract (reject)' : 'Reject'}
         </button>
       </div>
+      {canRetract && (
+        <div className="hint">Removes this report from the public map. The incident disappears if no published reports remain.</div>
+      )}
       {canRetry && (
         <div className="retry-box">
           <div className="muted small">Or run the model again on the same evidence (new attempt).</div>

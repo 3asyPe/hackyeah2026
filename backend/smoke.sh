@@ -54,7 +54,9 @@ for _ in $(seq 1 30); do
 done
 echo "status=$STATUS final=$(j "d['final']" < "$TMP/st.json")"
 [ "$STATUS" = "critical" ] || fail "fire report expected critical, got $STATUS"
-[ "$(j "d['current_assessment']['severity_confidence']['high']" < "$TMP/st.json")" != "None" ] || fail "no confidence"
+[ "$(j "'current_assessment' in d" < "$TMP/st.json")" = "False" ] || fail "public JSON leaks current_assessment"
+curl -fsS -H "Authorization: Bearer $OP" "$BASE/api/operator/reports/$RID" > "$TMP/op.json"
+[ "$(j "d['current_assessment']['severity_confidence']['high']" < "$TMP/op.json")" != "None" ] || fail "no confidence"
 
 echo "== public photo"
 CODE="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/api/reports/$RID/photo?token=$TOKEN")"

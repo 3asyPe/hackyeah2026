@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError, getReport, reportPhotoUrl } from '../api'
 import type { ReportPublic, Status } from '../api'
 import { usePoll } from '../hooks'
-import { AssessmentView, ErrorBox, FinalLine, SimulationNote, Spinner, StatusChip } from '../components/ui'
+import { ErrorBox, FinalLine, SimulationNote, Spinner, StatusChip } from '../components/ui'
 import { findMyReport, patchMyReport } from '../storage'
-import { fmtCoord, fmtTime, humanize } from '../labels'
+import { fmtCoord, fmtTime } from '../labels'
 
 function intervalFor(s: Status | undefined): number | null {
   if (!s || s === 'processing') return 2500
@@ -36,7 +36,7 @@ function Banner({ r }: { r: ReportPublic }) {
           <span className="banner-ico">👁</span>
           <div>
             <strong>Needs human review</strong>
-            <span>{r.review_reason ? humanize(r.review_reason) : 'An operator will check this report before it is published.'}</span>
+            <span>An operator will check this report before it is published.</span>
           </div>
         </div>
       )
@@ -135,7 +135,6 @@ export default function StatusPage() {
     )
   }
 
-  const a = report.current_assessment
   return (
     <div className="page status">
       <header className="page-head">
@@ -163,16 +162,6 @@ export default function StatusPage() {
             <h3>Final classification</h3>
           </header>
           <FinalLine final={report.final} />
-        </section>
-      )}
-
-      {a && (
-        <section className="card">
-          <header className="card-head">
-            <h3>Model assessment</h3>
-            <span className="muted small">attempt {a.attempt_no}</span>
-          </header>
-          <AssessmentView a={a} compact />
         </section>
       )}
 

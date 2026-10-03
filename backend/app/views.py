@@ -80,7 +80,10 @@ def report_public(conn, row, public: bool = True) -> dict:
     a = None
     if row["current_assessment_id"]:
         a = conn.execute("SELECT * FROM assessment WHERE id = ?", (row["current_assessment_id"],)).fetchone()
-    d["current_assessment"] = assessment_json(a) if a else None
+    if public:
+        d["review_reason"] = None
+    else:
+        d["current_assessment"] = assessment_json(a) if a else None
     s = conn.execute("SELECT * FROM notification_simulation WHERE report_id = ?", (row["id"],)).fetchone()
     d["simulation"] = simulation_json(s)
     # Other published reports grouped into the same incident (same rule as the public map).
