@@ -83,12 +83,22 @@ def report_public(conn, row, public: bool = True) -> dict:
     d["current_assessment"] = assessment_json(a) if a else None
     s = conn.execute("SELECT * FROM notification_simulation WHERE report_id = ?", (row["id"],)).fetchone()
     d["simulation"] = simulation_json(s)
+    # Other published reports grouped into the same incident (same rule as the public map).
+    d["incident_other_reports"] = 0 if row["status"] not in ("published", "critical") else conn.execute(
+        "SELECT COUNT(*) FROM report WHERE incident_id = ? AND id <> ? AND status = 'published'",
+        (row["incident_id"], row["id"])).fetchone()[0]
     return d
 
 
 def report_detail(conn, row) -> dict:
     d = report_public(conn, row, public=False)
     d["incident_state"] = row["incident_state"]
+    d["incident_reports"] = [
+        {"id": r["id"], "status": r["status"], "description": r["description"],
+         "has_photo": r["photo_path"] is not None, "submitted_at": r["submitted_at"]}
+        for r in conn.execute(
+            "SELECT id, status, description, photo_path, submitted_at FROM report "
+            "WHERE incident_id = ? AND id <> ? ORDER BY submitted_at", (row["incident_id"], row["id"]))]
     d["assessments"] = [assessment_json(a) for a in conn.execute(
         "SELECT * FROM assessment WHERE report_id = ? ORDER BY attempt_no", (row["id"],))]
     d["reviews"] = [review_json(rv) for rv in conn.execute(

@@ -13,7 +13,12 @@ function intervalFor(s: Status | undefined): number | null {
   return null
 }
 
+function groupedLine(n: number) {
+  return `Grouped with ${n} other report${n === 1 ? '' : 's'} of the same incident.`
+}
+
 function Banner({ r }: { r: ReportPublic }) {
+  const others = r.incident_other_reports
   switch (r.status) {
     case 'processing':
       return (
@@ -42,6 +47,7 @@ function Banner({ r }: { r: ReportPublic }) {
           <div>
             <strong>Published</strong>
             <span>Your report is linked to an incident on the public map.</span>
+            {others > 0 && <strong className="banner-grouped">{groupedLine(others)}</strong>}
           </div>
         </div>
       )
@@ -54,6 +60,7 @@ function Banner({ r }: { r: ReportPublic }) {
             <span>
               <span className="sim-tag">SIMULATED</span> 112 escalation: forwarded to operator dashboard. No real emergency service was contacted — call 112 yourself if lives are at risk.
             </span>
+            {others > 0 && <strong className="banner-grouped">{groupedLine(others)}</strong>}
           </div>
         </div>
       )
