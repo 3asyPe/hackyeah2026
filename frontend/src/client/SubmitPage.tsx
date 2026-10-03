@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { ApiError, fetchSamplePhoto, getSamples, isNetworkError, submitReport } from '../api'
 import type { Sample, SubmitPayload } from '../api'
 import { AiModeBadge, ErrorBox, Spinner } from '../components/ui'
-import { KRAKOW, OSM_ATTR, OSM_URL, pickIcon } from '../components/mapIcon'
+import OsmTiles from '../components/OsmTiles'
+import { KRAKOW, pickIcon } from '../components/mapIcon'
 import { useHealth, usePoll } from '../hooks'
 import { removeMyReport, randomToken, upsertMyReport, uuid } from '../storage'
 import { fmtCoord } from '../labels'
@@ -364,7 +365,7 @@ export default function SubmitPage() {
         </button>
         <div className="pick-map">
           <MapContainer center={pos} zoom={14} scrollWheelZoom={false} attributionControl={false}>
-            <TileLayer url={OSM_URL} attribution={OSM_ATTR} />
+            <OsmTiles />
             <Marker position={pos} icon={pickIcon} />
             <ClickToPick
               onPick={(lat, lon) => {

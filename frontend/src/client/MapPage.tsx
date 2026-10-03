@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMap } from 'react-leaflet'
 import { getIncident, getIncidents } from '../api'
 import type { IncidentMarker } from '../api'
 import { usePoll } from '../hooks'
-import { KRAKOW, OSM_ATTR, OSM_URL, severityIcon } from '../components/mapIcon'
+import OsmTiles from '../components/OsmTiles'
+import { KRAKOW, severityIcon } from '../components/mapIcon'
 import { LevelPill, Spinner } from '../components/ui'
 import { CATEGORY_ICON, ago, catLabel, fmtTime } from '../labels'
 
@@ -102,7 +103,7 @@ export default function MapPage() {
       </div>
       {error != null && <div className="map-err">Offline — showing last known incidents</div>}
       <MapContainer center={KRAKOW} zoom={13} className="map-full" zoomControl={false}>
-        <TileLayer url={OSM_URL} attribution={OSM_ATTR} />
+        <OsmTiles />
         {markers.map((m) => (
           <Marker
             key={m.id}

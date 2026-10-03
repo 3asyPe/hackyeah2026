@@ -1759,6 +1759,34 @@ a.counter:hover {
   background: #e5e1d6;
 }
 
+.map-offline {
+  background-color: var(--bg-2);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.map-offline .leaflet-tile {
+  visibility: hidden;
+}
+.map-offline-note {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow);
+  color: var(--ink-2);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+}
+
 @media (max-width: 900px) {
   .op {
     grid-template-columns: 1fr;
