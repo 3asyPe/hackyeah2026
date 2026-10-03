@@ -94,6 +94,8 @@ export interface ReportPublic extends ReportSummary {
   simulation: Simulation | null
   /** Other published reports in the same incident; 0 unless this report is published/critical. */
   incident_other_reports: number
+  /** True only while this published report's incident is on the public map. */
+  on_map: boolean
 }
 
 export interface IncidentSibling {

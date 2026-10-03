@@ -1,7 +1,10 @@
 """Row -> JSON shapes from the API contract (PLAN.md)."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+from . import config
 
 REPORT_SELECT = """
 SELECT r.*, i.state AS incident_state,
@@ -75,6 +78,11 @@ def report_summary(row, public: bool = False) -> dict:
     }
 
 
+def on_map(pub_rows) -> bool:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=config.MAP_MAX_AGE_H)).isoformat(timespec="seconds")
+    return max(r["incident_time"] for r in pub_rows) >= cutoff
+
+
 def report_public(conn, row, public: bool = True) -> dict:
     d = report_summary(row, public=public)
     if public:
@@ -90,6 +98,11 @@ def report_public(conn, row, public: bool = True) -> dict:
     d["incident_other_reports"] = 0 if row["status"] not in ("published", "critical") else conn.execute(
         "SELECT COUNT(*) FROM report WHERE incident_id = ? AND id <> ? AND status = 'published'",
         (row["incident_id"], row["id"])).fetchone()[0]
+    d["on_map"] = False
+    if row["status"] == "published" and row["incident_state"] == "active":
+        pub = conn.execute(REPORT_SELECT + " WHERE r.status = 'published' AND r.incident_id = ? "
+                           "ORDER BY r.incident_time", (row["incident_id"],)).fetchall()
+        d["on_map"] = bool(pub) and on_map(pub)
     return d
 
 

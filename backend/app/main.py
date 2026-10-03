@@ -300,11 +300,6 @@ def _published_by_incident(conn) -> dict[str, list]:
     return out
 
 
-def _on_map(pub_rows) -> bool:
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=config.MAP_MAX_AGE_H)).isoformat(timespec="seconds")
-    return max(r["incident_time"] for r in pub_rows) >= cutoff
-
-
 def _marker(inc, pub_rows) -> dict:
     return {
         "id": inc["id"], "category": inc["category"], "latitude": inc["latitude"], "longitude": inc["longitude"],
@@ -317,7 +312,7 @@ def _marker(inc, pub_rows) -> dict:
 def list_incidents_public(conn: sqlite3.Connection = Depends(get_conn)):
     pub = _published_by_incident(conn)
     rows = conn.execute("SELECT * FROM incident WHERE state = 'active' ORDER BY incident_time DESC").fetchall()
-    return [_marker(i, pub[i["id"]]) for i in rows if i["id"] in pub and _on_map(pub[i["id"]])]
+    return [_marker(i, pub[i["id"]]) for i in rows if i["id"] in pub and views.on_map(pub[i["id"]])]
 
 
 @app.get("/api/incidents/{incident_id}")
@@ -325,7 +320,7 @@ def get_incident_public(incident_id: str, conn: sqlite3.Connection = Depends(get
     inc = conn.execute("SELECT * FROM incident WHERE id = ? AND state = 'active'", (incident_id,)).fetchone()
     pub = conn.execute(views.REPORT_SELECT + " WHERE r.status = 'published' AND r.incident_id = ? "
                        "ORDER BY r.incident_time", (incident_id,)).fetchall()
-    if inc is None or not pub or not _on_map(pub):
+    if inc is None or not pub or not views.on_map(pub):
         raise HTTPException(404, "incident not found")
     d = _marker(inc, pub)
     # No description or photo here: free text may name or describe people (ERD v2 §2).

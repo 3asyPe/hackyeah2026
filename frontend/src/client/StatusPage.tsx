@@ -10,8 +10,9 @@ import { fmtCoord, fmtTime } from '../labels'
 function intervalFor(s: Status | undefined): number | null {
   if (!s || s === 'processing') return 2500
   // operator may act on these (review critical, retry failed, decide in_review); keep an eye on it
-  if (s === 'in_review' || s === 'failed' || s === 'critical') return 5000
-  if (s === 'published') return 10000 // operators can still retract; rare, so poll slowly
+  if (s === 'in_review' || s === 'failed') return 5000
+  // a published/critical report can still be retracted or decided live; poll slowly
+  if (s === 'published' || s === 'critical') return 10000
   return null // rejected is terminal
 }
 
@@ -109,7 +110,11 @@ function Banner({ r }: { r: ReportPublic }) {
           <span className="banner-ico">✓</span>
           <div>
             <strong>Published</strong>
-            <span>Your report is linked to an incident on the public map.</span>
+            <span>
+              {r.on_map
+                ? 'Your report is linked to an incident on the public map.'
+                : 'Your report is published. Its incident is older than 24 hours, so it is no longer shown on the live map.'}
+            </span>
             {others > 0 && <strong className="banner-grouped">{groupedLine(others)}</strong>}
           </div>
         </div>
@@ -225,7 +230,7 @@ export default function StatusPage() {
       <Banner r={report} />
       {err != null && <div className="hint hint-warn">Live update paused — retrying… ({(err as Error).message})</div>}
 
-      {report.status === 'published' && report.incident_id && (
+      {report.on_map && report.incident_id && (
         <Link className="btn btn-primary btn-block" to={`/map?incident=${report.incident_id}`}>
           View incident on map →
         </Link>
