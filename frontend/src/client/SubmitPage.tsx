@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
-import { ApiError, isNetworkError, submitReport } from '../api'
-import type { SubmitPayload } from '../api'
-import { ErrorBox, Spinner } from '../components/ui'
+import { ApiError, fetchSamplePhoto, getSamples, isNetworkError, submitReport } from '../api'
+import type { Sample, SubmitPayload } from '../api'
+import { AiModeBadge, ErrorBox, Spinner } from '../components/ui'
 import { KRAKOW, OSM_ATTR, OSM_URL, pickIcon } from '../components/mapIcon'
+import { useHealth, usePoll } from '../hooks'
 import { removeMyReport, randomToken, upsertMyReport, uuid } from '../storage'
 import { fmtCoord } from '../labels'
 
@@ -18,6 +19,65 @@ function toLocalInput(d: Date) {
 }
 
 type LocSource = 'default' | 'gps' | 'map'
+
+/** Plain text with any http(s) URLs turned into links (photo credits). */
+function Linkified({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(https?:\/\/\S+)/).map((part, i) =>
+        i % 2 ? (
+          <a key={i} href={part} target="_blank" rel="noreferrer">
+            {part}
+          </a>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  )
+}
+
+function SampleRow({ samples, busyId, onPick }: { samples: Sample[]; busyId: string | null; onPick: (s: Sample) => void }) {
+  return (
+    <section className="samples" aria-labelledby="samples-h">
+      <div className="samples-head">
+        <span id="samples-h" className="samples-title">Try a sample</span>
+        <span className="muted small">Fills in the form for you</span>
+      </div>
+      <div className="samples-row">
+        {samples.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className="sample"
+            onClick={() => onPick(s)}
+            disabled={busyId !== null}
+            aria-busy={busyId === s.id}
+          >
+            <span className="sample-thumb">
+              {s.photo_url ? (
+                <img src={s.photo_url} alt="" loading="lazy" />
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden><path d="M6 3h9l3 3v15H6z" /><path d="M9 10h6M9 14h6M9 18h4" /></svg>
+              )}
+              {busyId === s.id && (
+                <span className="sample-busy">
+                  <Spinner size={18} />
+                </span>
+              )}
+            </span>
+            <span className="sample-title">{s.title}</span>
+            {s.recorded && (
+              <span className="sample-rec" title="Real model output was recorded for this sample">
+                Recorded
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 function ClickToPick({ onPick }: { onPick: (lat: number, lon: number) => void }) {
   useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) })
@@ -34,9 +94,14 @@ function Recenter({ pos, nonce }: { pos: [number, number]; nonce: number }) {
 
 export default function SubmitPage() {
   const navigate = useNavigate()
+  const health = useHealth()
+  const { data: samples } = usePoll(getSamples, null)
+  const [sampleBusy, setSampleBusy] = useState<string | null>(null)
+  const [sampleErr, setSampleErr] = useState<string | null>(null)
   const [photo, setPhoto] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [photoErr, setPhotoErr] = useState<string | null>(null)
+  const [photoCredit, setPhotoCredit] = useState<string | null>(null)
   const [description, setDescription] = useState('')
   const [pos, setPos] = useState<[number, number]>(KRAKOW)
   const [locSource, setLocSource] = useState<LocSource>('default')
@@ -55,32 +120,74 @@ export default function SubmitPage() {
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
 
   // Any edit after a failed attempt means a new payload → new key on next submit.
+  // (No `attempt &&` check: setting null when already null is a no-op, and it avoids a stale closure
+  // when called after an await, e.g. from pickSample.)
   const edited = () => {
-    if (attempt && !busyRef.current) setAttempt(null)
+    if (!busyRef.current) setAttempt(null)
     setError(null)
   }
 
-  const onFile = (f: File | undefined) => {
-    if (!f) return
+  /** `credit` is set only for bundled sample photos; a user-picked photo clears it. */
+  const onFile = (f: File | undefined, credit: string | null = null): boolean => {
+    if (!f) return false
     if (!ACCEPTED.includes(f.type)) {
       setPhotoErr(`Unsupported format (${f.type || 'unknown'}). Use JPEG, PNG or WebP.`)
-      return
+      return false
     }
     if (f.size > MAX_BYTES) {
       setPhotoErr('Photo is larger than 10 MB.')
-      return
+      return false
     }
     setPhotoErr(null)
     setPhoto(f)
     setPreview(URL.createObjectURL(f))
+    setPhotoCredit(credit)
     edited()
+    return true
   }
 
   const clearPhoto = () => {
     setPhoto(null)
     setPreview(null)
+    setPhotoCredit(null)
     if (camRef.current) camRef.current.value = ''
     if (galRef.current) galRef.current.value = ''
+    edited()
+  }
+
+  // Fill the whole form from a bundled sample. The photo is uploaded byte-for-byte as served,
+  // so the replay assessor can match its recorded output.
+  const pickSeq = useRef(0)
+  const pickSample = async (s: Sample) => {
+    if (busyRef.current) return
+    const seq = ++pickSeq.current
+    setSampleBusy(s.id)
+    setSampleErr(null)
+    let file: File | null = null
+    try {
+      if (s.photo_url) file = await fetchSamplePhoto(s)
+    } catch (e) {
+      if (seq === pickSeq.current) {
+        setSampleErr(e instanceof Error ? e.message : 'Could not load the sample.')
+        setSampleBusy(null)
+      }
+      return
+    }
+    if (seq !== pickSeq.current) return
+    setSampleBusy(null)
+    if (busyRef.current) return
+    if (camRef.current) camRef.current.value = ''
+    if (galRef.current) galRef.current.value = ''
+    if (file) {
+      if (!onFile(file, s.credit)) return
+    } else {
+      clearPhoto()
+    }
+    setDescription(s.description ?? '')
+    setPos([s.latitude, s.longitude])
+    setLocSource('map')
+    setRecenter((n) => n + 1)
+    setTime(toLocalInput(new Date()))
     edited()
   }
 
@@ -181,7 +288,15 @@ export default function SubmitPage() {
         <div className="eyebrow">Incident Reporter · Kraków</div>
         <h1>Report an incident</h1>
         <p className="lede">Photo, place and time. We assess it and route it to the map or to an operator.</p>
+        <AiModeBadge health={health} />
       </header>
+
+      {samples && samples.length > 0 && (
+        <div>
+          <SampleRow samples={samples} busyId={sampleBusy} onPick={(s) => void pickSample(s)} />
+          {sampleErr && <div className="hint hint-bad">{sampleErr}</div>}
+        </div>
+      )}
 
       {/* Photo */}
       <section className="field">
@@ -189,11 +304,18 @@ export default function SubmitPage() {
           <span className="step">1</span> Photo
         </div>
         {preview ? (
-          <div className="photo-preview">
-            <img src={preview} alt="Selected" />
-            <button type="button" className="btn btn-ghost btn-sm photo-x" onClick={clearPhoto}>
-              Remove
-            </button>
+          <div>
+            <div className="photo-preview">
+              <img src={preview} alt="Selected" />
+              <button type="button" className="btn btn-ghost btn-sm photo-x" onClick={clearPhoto}>
+                Remove
+              </button>
+            </div>
+            {photoCredit && (
+              <div className="photo-credit muted small">
+                <Linkified text={photoCredit} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="photo-pick">

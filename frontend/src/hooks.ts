@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getHealth } from './api'
+import type { Health } from './api'
 
 export interface PollState<T> {
   data: T | null
@@ -66,4 +68,30 @@ export function useNow(ms = 30000) {
     const t = setInterval(() => set((x) => x + 1), ms)
     return () => clearInterval(t)
   }, [ms])
+}
+
+// Fetched once per page load and shared by every caller; a failure resolves to null (and is retried on next mount).
+let healthPromise: Promise<Health | null> | null = null
+let healthValue: Health | null = null
+
+/** Backend health (assessor mode etc.), or null while loading / when unavailable. */
+export function useHealth(): Health | null {
+  const [health, setHealth] = useState<Health | null>(healthValue)
+  useEffect(() => {
+    let cancelled = false
+    healthPromise ??= getHealth().then(
+      (h) => (healthValue = h),
+      () => {
+        healthPromise = null // let a later mount retry
+        return null
+      },
+    )
+    healthPromise.then((h) => {
+      if (!cancelled) setHealth(h)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  return health
 }

@@ -1,10 +1,15 @@
-"""Assessment of a report: OpenAI Structured Outputs, or a deterministic mock when no key is set.
+"""Assessment of a report: OpenAI Structured Outputs, recorded OpenAI output (replay), or a keyword mock.
+
+Mode comes from config.ASSESSOR_MODE. Replay looks up fixtures/replay/<fixture_key>.json and falls back to the mock.
 
 The assessor only *assesses*. All routing rules (review / critical / publish) live in processing.py.
 """
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
+import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -15,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from . import config
 
+log = logging.getLogger("assessor")
 Category = Literal["fire_smoke", "road_hazard", "infrastructure_damage", "waste_pollution", "other"]
 Level = Literal["low", "medium", "high"]
 Consistency = Literal["matches", "mismatches", "inconclusive", "not_applicable"]
@@ -60,7 +66,16 @@ class AssessInput:
 
 
 def model_name() -> str:
-    return config.OPENAI_MODEL if config.OPENAI_API_KEY else "mock"
+    """Label of the active mode (health, failed attempts). assess() returns the per-result label."""
+    return config.OPENAI_MODEL if config.ASSESSOR_MODE == "openai" else config.ASSESSOR_MODE
+
+
+def fixture_key(description: Optional[str], photo_bytes: Optional[bytes]) -> str:
+    """Replay key: sha256 of the canonical {description, photo_sha256} JSON (see fixtures/replay)."""
+    desc = (description or "").strip() or None
+    photo = hashlib.sha256(photo_bytes).hexdigest() if photo_bytes else None
+    canon = json.dumps({"description": desc, "photo_sha256": photo}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canon.encode()).hexdigest()
 
 
 SYSTEM_PROMPT = """You assess citizen incident reports for a city incident-reporting prototype.
@@ -116,14 +131,38 @@ def _normalize(out: AssessmentOutput, has_photo: bool, has_description: bool) ->
     return out
 
 
-def assess(inp: AssessInput) -> AssessmentOutput:
+def assess(inp: AssessInput) -> tuple[AssessmentOutput, str]:
+    """Returns (output, model label): OPENAI_MODEL, 'replay:<recorded model>' or 'mock'."""
     has_photo = bool(inp.photo_path)
     has_desc = bool(inp.description and inp.description.strip())
-    if config.OPENAI_API_KEY:
-        out = _assess_openai(inp)
+    mode = config.ASSESSOR_MODE
+    if mode == "openai":
+        if not config.OPENAI_API_KEY:
+            raise AssessmentError("config_error", "ASSESSOR=openai but OPENAI_API_KEY is not set")
+        out, label = _assess_openai(inp), config.OPENAI_MODEL
+    elif mode == "replay" and (hit := _assess_replay(inp)) is not None:
+        out, label = hit
     else:
-        out = _assess_mock(inp)
-    return _normalize(out, has_photo, has_desc)
+        out, label = _assess_mock(inp, replay_miss=mode == "replay"), "mock"
+    return _normalize(out, has_photo, has_desc), label
+
+
+# ---------------------------------------------------------------- Replay
+def _assess_replay(inp: AssessInput) -> Optional[tuple[AssessmentOutput, str]]:
+    """Recorded OpenAI output for exactly this description + photo bytes, or None (caller falls back to mock)."""
+    photo = Path(inp.photo_path).read_bytes() if inp.photo_path else None
+    path = config.FIXTURES_DIR / f"{fixture_key(inp.description, photo)}.json"
+    if not path.is_file():
+        return None
+    try:
+        fx = json.loads(path.read_text(encoding="utf-8"))
+        out = AssessmentOutput.model_validate(fx["output"])
+    except Exception:
+        log.exception("unreadable replay fixture %s, using the mock", path.name)
+        return None
+    if config.MOCK_DELAY_S > 0:
+        time.sleep(config.MOCK_DELAY_S)
+    return out, f"replay:{fx.get('model') or 'unknown'}"
 
 
 # ---------------------------------------------------------------- OpenAI
@@ -195,7 +234,7 @@ def _conf(level: Optional[str], tie: bool = False) -> Optional[Confidence]:
     return table[level]
 
 
-def _assess_mock(inp: AssessInput) -> AssessmentOutput:
+def _assess_mock(inp: AssessInput, replay_miss: bool = False) -> AssessmentOutput:
     if config.MOCK_DELAY_S > 0:
         time.sleep(config.MOCK_DELAY_S)
     d = (inp.description or "").lower()
@@ -228,6 +267,12 @@ def _assess_mock(inp: AssessInput) -> AssessmentOutput:
     check = "no_obvious_concerns" if has_photo else "not_applicable"
     manip = "suspicious" if ("fake" in d and has_photo) else check
 
+    if replay_miss:
+        why = "No real model was called: this report does not match a recorded sample, so replay fell back to the mock."
+    elif config.OPENAI_API_KEY:
+        why = "No real model was called (ASSESSOR=mock)."
+    else:
+        why = "No real model was called (OPENAI_API_KEY not set)."
     return AssessmentOutput(
         category=cat,
         severity=sev,
@@ -240,6 +285,6 @@ def _assess_mock(inp: AssessInput) -> AssessmentOutput:
         manipulation_concerns=manip,
         explanation=(
             f"[MOCK assessor] Keyword-based assessment: category {cat}, severity {sev or 'undetermined'}, "
-            f"urgency {urg}. No real model was called (OPENAI_API_KEY not set)."
+            f"urgency {urg}. {why}"
         ),
     )

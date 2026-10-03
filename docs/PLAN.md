@@ -43,6 +43,10 @@ Times are ISO-8601 strings with timezone.
 - `GET /api/reports/{id}/photo?token=<receipt_token>` → image bytes.
 - `GET /api/incidents` → `IncidentMarker[]` = `{id, category, latitude, longitude, incident_time, published_count, max_severity}`
 - `GET /api/incidents/{id}` → `{...IncidentMarker, reports: [{id, description, incident_time, severity, urgency}]}` (published only)
+- `GET /api/health` → `{ok, assessor, mode: "openai"|"replay"|"mock", model, recorded_samples}`
+- `GET /api/samples` → `[{id, title, description, photo_url, latitude, longitude, credit, recorded}]` bundled demo
+  reports (`backend/samples/`); `recorded` = a replay fixture exists. `GET /api/samples/{id}/photo` → the raw file
+  bytes (404 if none). Submitting them unchanged gets the recorded assessment in replay mode.
 
 ### Operator (header `Authorization: Bearer <token>`; 401 otherwise)
 - `GET /api/operator/summary` → `{processing, in_review, published, critical, rejected, failed, active_incidents}`

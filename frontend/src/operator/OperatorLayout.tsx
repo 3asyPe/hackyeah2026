@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { getOperatorToken, op, setOperatorToken } from '../api'
+import { AiModeBadge } from '../components/ui'
+import { useHealth } from '../hooks'
 import { OperatorContext, useOpPoll } from './ctx'
 
 function TokenGate({ onSubmit, message }: { onSubmit: (t: string) => void; message: string | null }) {
@@ -35,6 +37,7 @@ function Badge({ n, tone }: { n: number | undefined; tone: string }) {
 
 function Shell() {
   const { data: s, error } = useOpPoll(op.summary, 'summary')
+  const health = useHealth()
   return (
     <div className="op">
       <aside className="op-side">
@@ -60,6 +63,7 @@ function Shell() {
           </NavLink>
         </nav>
         <div className="op-side-foot">
+          <AiModeBadge health={health} dark />
           <div className={`live ${error ? 'live-off' : ''}`}>
             <span className="live-dot" /> {error ? 'API unreachable' : 'Live · 3 s'}
           </div>

@@ -1,0 +1,30 @@
+{
+  "key": "e6366a68bd10c81780ad4e27e04d8d5ee937d8def8d33ba45b93c9f83cc7797d",
+  "sample_id": "fallen-tree",
+  "model": "gpt-6-luna",
+  "recorded_at": "2026-10-03T17:48:53+00:00",
+  "input": {
+    "description": "Tree fell over in the wind, roots ripped out of the pavement and it's lying across the road and the sidewalk. Cars can't get through on this side.",
+    "photo_sha256": "374243048ddfe22cfbb57093600ed52d20b27261fe3aa46e16e657aed451cca3"
+  },
+  "output": {
+    "category": "road_hazard",
+    "severity": "medium",
+    "urgency": "high",
+    "severity_confidence": {
+      "low": 10.0,
+      "medium": 75.0,
+      "high": 35.0
+    },
+    "urgency_confidence": {
+      "low": 5.0,
+      "medium": 20.0,
+      "high": 85.0
+    },
+    "photo_description_match": "matches",
+    "scene_plausibility": "no_obvious_concerns",
+    "time_consistency": "suspicious",
+    "manipulation_concerns": "no_obvious_concerns",
+    "explanation": "The photo shows a fallen tree with exposed roots obstructing the sidewalk and part of the road, consistent with the description. The blockage creates a significant traffic and pedestrian hazard requiring prompt response. The bright daylight in the photo appears inconsistent with the claimed local solar time of about 19:08 in early October."
+  }
+}

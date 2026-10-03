@@ -18,7 +18,7 @@ Backend (port 8000):
 
 ```bash
 cd backend
-cp .env.example .env          # set OPENAI_API_KEY; leave it empty to use the mock assessor
+cp .env.example .env          # set OPENAI_API_KEY; leave it empty to replay recorded assessments
 uv venv && uv pip install -r requirements.txt
 .venv/bin/python -m app.seed  # demo data
 .venv/bin/uvicorn app.main:app --port 8000 --reload
@@ -36,7 +36,18 @@ npm install && npm run dev
 
 ## Demo without an API key
 
-The mock assessor picks the outcome from keywords in the description:
+With no `OPENAI_API_KEY` the backend runs in **replay** mode. The bundled samples in `backend/samples/` come with real
+model outputs recorded in `backend/fixtures/replay/`, so submitting a sample unchanged shows a real assessment. Any
+other report goes to a keyword mock, and its explanation says so. `assessment.model` shows which one ran
+(`replay:<model>` or `mock`), and `GET /api/health` reports the mode.
+
+To try it, open the client, pick a card under **Try a sample** on the Report page and submit. The badge at the top shows
+which assessor is active. Sample photos are from Wikimedia Commons; the credits are in `backend/samples/samples.json`.
+
+`ASSESSOR` in `.env` picks the mode: `auto` (default: `openai` with a key, otherwise `replay`), `openai`, `replay` or
+`mock`. To re-record the samples with a key, run `.venv/bin/python -m app.record_fixtures [--only id,id] [--force]`.
+
+The mock picks the outcome from keywords in the description:
 
 - `fire` → critical
 - `trash` → published

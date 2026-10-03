@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# End-to-end smoke test against a running backend (mock assessor when OPENAI_API_KEY is unset).
+# End-to-end smoke test against a running backend in replay or mock mode (no OPENAI_API_KEY). Its generated
+# inputs never match a recorded sample, so replay falls back to the keyword mock.
 # Usage: ./smoke.sh [base_url]   (default http://localhost:8000)
 set -euo pipefail
 BASE="${1:-http://localhost:8000}"
@@ -15,7 +16,9 @@ uuid() { "$PY" -c "import uuid; print(uuid.uuid4())"; }
 "$PY" -c "from PIL import Image; Image.new('RGB',(32,32),(220,80,20)).save('$TMP/tiny.jpg','JPEG')"
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-echo "== health"; curl -fsS "$BASE/api/health"; echo
+echo "== health"; curl -fsS "$BASE/api/health" | tee "$TMP/h.json"; echo
+MODE="$(j "d.get('mode')" < "$TMP/h.json")"
+case "$MODE" in replay|mock) ;; *) fail "expected assessor mode replay or mock, got $MODE";; esac
 
 echo "== submit fire report with photo"
 KEY="$(uuid)"; TOKEN="smoke-receipt-$(uuid)"

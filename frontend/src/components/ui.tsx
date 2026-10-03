@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { Assessment, Confidence, Final, Level, Simulation, Status } from '../api'
+import type { Assessment, Confidence, Final, Health, Level, Simulation, Status } from '../api'
 import { ApiError } from '../api'
 import {
   CONSISTENCY_LABEL,
@@ -25,6 +25,39 @@ export function LevelPill({ level, label }: { level: Level | null | undefined; l
     <span className={`level level-${level ?? 'none'}`}>
       {label && <span className="level-k">{label}</span>}
       {levelLabel(level)}
+    </span>
+  )
+}
+
+/** Small pill saying what assesses reports. Renders nothing until health is known (or if it failed). */
+export function AiModeBadge({ health, dark = false }: { health: Health | null; dark?: boolean }) {
+  if (!health?.mode) return null
+  const model = health.model || null
+  let text: string
+  let title: string
+  switch (health.mode) {
+    case 'openai':
+      text = `AI: ${model ?? 'OpenAI'}`
+      title = `Reports are assessed live by OpenAI${model ? ` (${model})` : ''}.`
+      break
+    case 'replay':
+      text = `AI: recorded ${model ?? 'model'} responses`
+      title =
+        `No API key configured. The bundled sample reports replay real, previously recorded ${model ?? 'model'} output` +
+        `${health.recorded_samples ? ` (${health.recorded_samples} recorded)` : ''}; ` +
+        'any other photo or description is assessed by a simple keyword mock.'
+      break
+    case 'mock':
+      text = 'AI: keyword mock'
+      title = 'No AI model configured. Reports are classified by a simple keyword heuristic.'
+      break
+    default:
+      return null
+  }
+  return (
+    <span className={`ai-badge ai-${health.mode} ${dark ? 'ai-badge-dark' : ''}`} title={title}>
+      <span className="ai-dot" aria-hidden />
+      {text}
     </span>
   )
 }

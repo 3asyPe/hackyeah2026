@@ -1,0 +1,30 @@
+{
+  "key": "3696f962abb3d2622f1345f842022ee71be13776502679b4b939fd39d57ab73c",
+  "sample_id": "gas-smell-no-photo",
+  "model": "gpt-6-luna",
+  "recorded_at": "2026-10-03T17:49:07+00:00",
+  "input": {
+    "description": "Strong smell of gas in the stairwell of our building at Długa street, getting worse.",
+    "photo_sha256": null
+  },
+  "output": {
+    "category": "other",
+    "severity": "high",
+    "urgency": "high",
+    "severity_confidence": {
+      "low": 2.0,
+      "medium": 12.0,
+      "high": 86.0
+    },
+    "urgency_confidence": {
+      "low": 1.0,
+      "medium": 4.0,
+      "high": 95.0
+    },
+    "photo_description_match": "not_applicable",
+    "scene_plausibility": "not_applicable",
+    "time_consistency": "not_applicable",
+    "manipulation_concerns": "not_applicable",
+    "explanation": "The report describes a worsening gas smell in an enclosed stairwell, which could indicate a dangerous leak with fire, explosion, or health risks. Treat this as an urgent potential emergency; no photo was provided for visual assessment."
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "key": "e69806d8cdfc5d91664f97339959cfb46c5f21f1acf4b21a20565cb03cb0c050",
+  "sample_id": "mismatch",
+  "model": "gpt-6-luna",
+  "recorded_at": "2026-10-03T17:48:58+00:00",
+  "input": {
+    "description": "Underpass completely flooded, water up to the car doors. A car is stuck in the middle, please send help!",
+    "photo_sha256": "7e6e7ab01ac70d97f1639df9e199f7c6ebaa4e434a6619a64459796c72adc822"
+  },
+  "output": {
+    "category": "road_hazard",
+    "severity": "high",
+    "urgency": "high",
+    "severity_confidence": {
+      "low": 2.0,
+      "medium": 5.0,
+      "high": 95.0
+    },
+    "urgency_confidence": {
+      "low": 1.0,
+      "medium": 3.0,
+      "high": 96.0
+    },
+    "photo_description_match": "mismatches",
+    "scene_plausibility": "no_obvious_concerns",
+    "time_consistency": "suspicious",
+    "manipulation_concerns": "no_obvious_concerns",
+    "explanation": "The description reports deep roadway flooding with a trapped car, which would pose severe danger and require an immediate response. The photo instead shows a dry residential building and street, with no visible underpass, floodwater, or stranded vehicle. The bright daylight also appears inconsistent with the claimed local solar time of 19:08."
+  }
+}

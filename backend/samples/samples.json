@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fire-building",
+    "title": "Building on fire",
+    "description": "Big fire in an old brick building, flames coming out of the roof and top windows, tons of black smoke. Fire brigade just got here but it's spreading fast!!",
+    "photo": "fire-building.jpg",
+    "latitude": 50.065,
+    "longitude": 19.92,
+    "credit": "Photo: Sylvain Pedneault, CC BY-SA 3.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Fire_inside_an_abandoned_convent_in_Massueville,_Quebec,_Canada.jpg"
+  },
+  {
+    "id": "car-accident",
+    "title": "Car crash on the street",
+    "description": "Two cars crashed into each other on the street, front of one car is smashed and leaking fluid on the road. Blocking a lane, traffic going around it.",
+    "photo": "car-accident.jpg",
+    "latitude": 50.0705,
+    "longitude": 19.9452,
+    "credit": "Photo: Lowdown, CC BY-SA 4.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Road_accident_at_Rymanowska_Street_in_Sanok_(2024).jpg"
+  },
+  {
+    "id": "pothole",
+    "title": "Deep pothole on a crossing",
+    "description": "Huge deep pothole right at the pedestrian crossing, full of muddy water so you can't see how deep it is. Cars swerving to avoid it.",
+    "photo": "pothole.jpg",
+    "latitude": 50.054,
+    "longitude": 19.95,
+    "credit": "Photo: Miguel Tremblay, Public domain, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Pothole_in_Villeray,_Montr%C3%A9al.jpg"
+  },
+  {
+    "id": "overflowing-trash",
+    "title": "Overflowing bins on pavement",
+    "description": "Bins overflowing again, lid won't close and cardboard boxes and rubbish piled all over the pavement next to them. Nobody has collected it for days.",
+    "photo": "overflowing-trash.jpg",
+    "latitude": 50.0618,
+    "longitude": 19.9372,
+    "credit": "Photo: Acabashi, CC BY-SA 4.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Commercial_waste_bins_rubbish_Lordship_Lane_Tottenham,_London,_England_1.jpg"
+  },
+  {
+    "id": "fallen-tree",
+    "title": "Fallen tree across the road",
+    "description": "Tree fell over in the wind, roots ripped out of the pavement and it's lying across the road and the sidewalk. Cars can't get through on this side.",
+    "photo": "fallen-tree.jpg",
+    "latitude": 50.075,
+    "longitude": 19.93,
+    "credit": "Photo: Vauxford, CC BY-SA 4.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Fallen_Tree_in_Dormer_Place,_Leamington_Spa.jpg"
+  },
+  {
+    "id": "mismatch",
+    "title": "Flooded underpass",
+    "description": "Underpass completely flooded, water up to the car doors. A car is stuck in the middle, please send help!",
+    "photo": "mismatch.jpg",
+    "latitude": 50.058,
+    "longitude": 19.955,
+    "credit": "Photo: Igor123121, CC BY-SA 4.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Modern_residential_development_in_G%C3%B3rka_Narodowa._Pr%C4%85dnik_Bia%C5%82y,_Krak%C3%B3w,_Poland.jpg"
+  },
+  {
+    "id": "graffiti-bench",
+    "title": "Graffiti on a park bench",
+    "description": "Someone sprayed graffiti all over the bench by the path in the park. Not urgent, just looks bad.",
+    "photo": "graffiti-bench.jpg",
+    "latitude": 50.079,
+    "longitude": 19.962,
+    "credit": "Photo: JIP, CC BY-SA 4.0, Wikimedia Commons https://commons.wikimedia.org/wiki/File:Bench_in_Matinkyl%C3%A4_with_graffiti_on_a_sunny_afternoon_in_July_2025.jpg"
+  },
+  {
+    "id": "gas-smell-no-photo",
+    "title": "Gas smell in stairwell",
+    "description": "Strong smell of gas in the stairwell of our building at Długa street, getting worse.",
+    "photo": null,
+    "latitude": 50.07,
+    "longitude": 19.938,
+    "credit": null
+  }
+]

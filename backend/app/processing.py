@@ -66,10 +66,10 @@ def review_reasons(a: sqlite3.Row) -> list[str]:
 
 
 # ---------------------------------------------------------------- assessment
-def _insert_assessment(conn, report_id: str, attempt_no: int, started_at: str,
+def _insert_assessment(conn, report_id: str, attempt_no: int, started_at: str, model: str,
                        out: Optional[assessor.AssessmentOutput], err: Optional[assessor.AssessmentError]) -> str:
     aid = new_id()
-    base = dict(id=aid, report_id=report_id, attempt_no=attempt_no, model=assessor.model_name(),
+    base = dict(id=aid, report_id=report_id, attempt_no=attempt_no, model=model,
                 prompt_version=config.PROMPT_VERSION, started_at=started_at, completed_at=now_iso())
     if out is not None:
         sc, uc = out.severity_confidence, out.urgency_confidence
@@ -103,9 +103,9 @@ def process_report(report_id: str) -> None:
             "SELECT COALESCE(MAX(attempt_no), 0) + 1 FROM assessment WHERE report_id = ?", (report_id,)
         ).fetchone()[0]
         started = now_iso()
-        out, err = None, None
+        out, err, model = None, None, assessor.model_name()
         try:
-            out = assessor.assess(assessor.AssessInput(
+            out, model = assessor.assess(assessor.AssessInput(
                 report_id=report_id, attempt_no=attempt_no, description=r["description"],
                 photo_path=str(config.UPLOAD_DIR / r["photo_path"]) if r["photo_path"] else None,
                 photo_media_type=r["photo_media_type"], latitude=r["latitude"], longitude=r["longitude"],
@@ -122,10 +122,10 @@ def process_report(report_id: str) -> None:
             if cur["status"] != "processing":
                 return
             try:
-                aid = _insert_assessment(conn, report_id, attempt_no, started, out, err)
+                aid = _insert_assessment(conn, report_id, attempt_no, started, model, out, err)
             except sqlite3.IntegrityError as e:  # model output violated DB constraints
                 out, err = None, assessor.AssessmentError("invalid_response", f"constraint violation: {e}")
-                aid = _insert_assessment(conn, report_id, attempt_no, started, None, err)
+                aid = _insert_assessment(conn, report_id, attempt_no, started, model, None, err)
             now = now_iso()
             if out is None:
                 conn.execute("UPDATE report SET current_assessment_id=?, status='failed', updated_at=? WHERE id=?",

@@ -265,6 +265,52 @@ export const getIncidents = () => request<IncidentMarker[]>('/api/incidents')
 export const getIncident = (id: string) =>
   request<IncidentPublic>(`/api/incidents/${encodeURIComponent(id)}`)
 
+// ---------------------------------------------------------------- health & samples
+
+export type AssessorMode = 'openai' | 'replay' | 'mock'
+
+export interface Health {
+  ok: boolean
+  assessor: string
+  mode?: AssessorMode // absent on older backends
+  model?: string | null
+  recorded_samples?: number
+}
+
+export interface Sample {
+  id: string
+  title: string
+  description: string | null
+  photo_url: string | null
+  latitude: number
+  longitude: number
+  credit: string | null
+  recorded: boolean
+}
+
+export const getHealth = () => request<Health>('/api/health')
+export const getSamples = () => request<Sample[]>('/api/samples')
+
+const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+
+/**
+ * Downloads a sample photo as a File holding the exact served bytes (no re-encoding):
+ * the replay assessor matches recorded output on a sha256 of the raw upload.
+ */
+export async function fetchSamplePhoto(s: Sample): Promise<File> {
+  if (!s.photo_url) throw new Error('This sample has no photo.')
+  let res: Response
+  try {
+    res = await fetch(s.photo_url)
+  } catch {
+    throw new ApiError(0, 'Network error — check your connection and try again.')
+  }
+  if (!res.ok) throw new ApiError(res.status, `Could not load the sample photo (${res.status}).`)
+  const blob = await res.blob()
+  const type = (blob.type || res.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase()
+  return new File([blob], `${s.id}.${EXT[type] ?? 'jpg'}`, { type })
+}
+
 // ---------------------------------------------------------------- operator
 
 const TOKEN_KEY = 'operatorToken'

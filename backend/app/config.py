@@ -15,13 +15,21 @@ def _f(name: str, default: float) -> float:
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data"))
 DB_PATH = Path(os.getenv("DB_PATH", DATA_DIR / "app.db"))
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", BACKEND_DIR / "uploads"))
+SAMPLES_DIR = Path(os.getenv("SAMPLES_DIR", BACKEND_DIR / "samples"))
+FIXTURES_DIR = Path(os.getenv("FIXTURES_DIR", BACKEND_DIR / "fixtures" / "replay"))
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 OPENAI_TIMEOUT_S = _f("OPENAI_TIMEOUT_S", 60)
 PROMPT_VERSION = "v1"
-MOCK_DELAY_S = _f("MOCK_DELAY_S", 1.0)
+MOCK_DELAY_S = _f("MOCK_DELAY_S", 1.0)  # also applied to replay hits, so "Processing" stays visible
+
+# auto -> openai when a key is set, else replay (recorded fixtures, keyword mock on a miss)
+ASSESSOR = os.getenv("ASSESSOR", "auto").strip().lower() or "auto"
+if ASSESSOR not in ("auto", "openai", "replay", "mock"):
+    raise ValueError(f"ASSESSOR must be auto, openai, replay or mock (got {ASSESSOR!r})")
+ASSESSOR_MODE = ("openai" if OPENAI_API_KEY else "replay") if ASSESSOR == "auto" else ASSESSOR
 
 OPERATOR_TOKEN = os.getenv("OPERATOR_TOKEN", "demo").strip() or "demo"
 

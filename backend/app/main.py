@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
-from . import assessor, config, views
+from . import assessor, config, samples, views
 from .db import GROUP_LOCK, get_conn, init_db, new_id, now_iso, tx
 from .processing import process_report, recover_interrupted, route_in_tx
 
@@ -33,11 +33,16 @@ PIL_TYPES = {"JPEG": ("image/jpeg", "jpg"), "PNG": ("image/png", "png"), "WEBP":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if config.ASSESSOR_MODE == "openai" and not config.OPENAI_API_KEY:
+        raise RuntimeError("ASSESSOR=openai requires OPENAI_API_KEY (or use ASSESSOR=auto/replay/mock)")
     init_db()
     n = recover_interrupted()
     if n:
         log.warning("Marked %d interrupted report(s) as failed", n)
-    log.info("Assessor: %s", "OpenAI " + config.OPENAI_MODEL if config.OPENAI_API_KEY else "MOCK (no OPENAI_API_KEY)")
+    mode = config.ASSESSOR_MODE
+    log.info("Assessor: %s", {"openai": f"OpenAI {config.OPENAI_MODEL}",
+                              "replay": "REPLAY of recorded samples (keyword mock otherwise)",
+                              "mock": "MOCK (keyword-based)"}[mode])
     yield
 
 
@@ -55,7 +60,34 @@ def _bad(msg: str, code: int = 422):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "assessor": assessor.model_name()}
+    recorded = [f for s in samples.load() if (f := samples.fixture(s)) is not None]
+    if config.ASSESSOR_MODE == "openai":
+        model = config.OPENAI_MODEL
+    elif config.ASSESSOR_MODE == "replay":
+        model = ", ".join(sorted({str(f.get("model")) for f in recorded})) or None
+    else:
+        model = None
+    return {"ok": True, "assessor": assessor.model_name(), "mode": config.ASSESSOR_MODE, "model": model,
+            "recorded_samples": len(recorded)}
+
+
+@app.get("/api/samples")
+def list_samples():
+    return [{
+        "id": s["id"], "title": s.get("title") or s["id"], "description": s.get("description"),
+        "photo_url": f"/api/samples/{s['id']}/photo" if samples.photo_path(s) else None,
+        "latitude": s.get("latitude"), "longitude": s.get("longitude"), "credit": s.get("credit"),
+        "recorded": samples.fixture(s) is not None,
+    } for s in samples.load()]
+
+
+@app.get("/api/samples/{sample_id}/photo")
+def sample_photo(sample_id: str):
+    s = samples.get(sample_id)  # looked up by id; the path never comes from the request
+    path = samples.photo_path(s) if s else None
+    if path is None:
+        raise HTTPException(404, "sample photo not found")
+    return FileResponse(path, media_type=samples.MEDIA_TYPES[path.suffix.lower()])
 
 
 # ================================================================ public
