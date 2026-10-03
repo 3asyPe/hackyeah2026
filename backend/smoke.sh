@@ -107,7 +107,7 @@ curl -fsS -X POST -H "Authorization: Bearer $OP" -H 'Content-Type: application/j
 [ "$(j "d['final']['source']" < "$TMP/rv.json")" = "operator" ] || fail "final source not operator"
 [ "$(j "len(d['reviews'])" < "$TMP/rv.json")" = "1" ] || fail "review not recorded"
 CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $OP" -H 'Content-Type: application/json' \
-  -d '{"action":"reject","operator_label":"x"}' "$BASE/api/operator/reports/$REV/review")"
+  -d '{"action":"approve","final_category":"road_hazard","final_severity":"high","final_urgency":"low","operator_label":"x"}' "$BASE/api/operator/reports/$REV/review")"
 [ "$CODE" = "409" ] || fail "second review expected 409, got $CODE"
 
 echo "== flaky report -> failed, retry -> processed"

@@ -36,6 +36,9 @@ OPERATOR_TOKEN = os.getenv("OPERATOR_TOKEN", "demo").strip() or "demo"
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 MAX_DESCRIPTION_CHARS = int(_f("MAX_DESCRIPTION_CHARS", 2000))
 MIN_RECEIPT_TOKEN_CHARS = 16
+MAX_INCIDENT_AGE_H = _f("MAX_INCIDENT_AGE_H", 72)  # reports older than this are rejected
+MAP_MAX_AGE_H = _f("MAP_MAX_AGE_H", 24)  # public map hides incidents whose latest report is older
+ASSESS_WORKERS = int(_f("ASSESS_WORKERS", 4))
 
 # Grouping (ERD §10)
 MIN_TOP_CONFIDENCE = _f("MIN_TOP_CONFIDENCE", 50)  # top severity/urgency confidence below this => in_review

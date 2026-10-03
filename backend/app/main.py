@@ -12,16 +12,15 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from fastapi import (BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query,
-                     UploadFile)
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
-from . import assessor, config, samples, views
+from . import assessor, config, jobs, samples, views
 from .db import GROUP_LOCK, get_conn, init_db, new_id, now_iso, tx
-from .processing import process_report, recover_interrupted, route_in_tx
+from .processing import recover_interrupted, route_in_tx
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("api")
@@ -44,6 +43,7 @@ async def lifespan(app: FastAPI):
                               "replay": "REPLAY of recorded samples (keyword mock otherwise)",
                               "mock": "MOCK (keyword-based)"}[mode])
     yield
+    jobs.shutdown()
 
 
 app = FastAPI(title="Incident Reporter API", version="1.0", lifespan=lifespan)
@@ -93,7 +93,6 @@ def sample_photo(sample_id: str):
 # ================================================================ public
 @app.post("/api/reports", status_code=202)
 def submit_report(
-    background: BackgroundTasks,
     submission_key: str = Form(...),
     receipt_token: str = Form(...),
     latitude: float = Form(...),
@@ -121,6 +120,8 @@ def submit_report(
     it = it.astimezone(timezone.utc)
     if it > datetime.now(timezone.utc) + timedelta(minutes=10):
         _bad("incident_time cannot be in the future")
+    if it < datetime.now(timezone.utc) - timedelta(hours=config.MAX_INCIDENT_AGE_H):
+        _bad(f"incident_time is more than {config.MAX_INCIDENT_AGE_H:g} hours in the past")
     incident_time_iso = it.isoformat(timespec="seconds")
     description = (description or "").strip() or None
     if description and len(description) > config.MAX_DESCRIPTION_CHARS:
@@ -198,7 +199,7 @@ def submit_report(
             return resp
         raise
     if has_evidence:
-        background.add_task(process_report, report_id)
+        jobs.submit(report_id)
     return {"id": report_id, "status": status}
 
 
@@ -240,6 +241,11 @@ def _published_by_incident(conn) -> dict[str, list]:
     return out
 
 
+def _on_map(pub_rows) -> bool:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=config.MAP_MAX_AGE_H)).isoformat(timespec="seconds")
+    return max(r["incident_time"] for r in pub_rows) >= cutoff
+
+
 def _marker(inc, pub_rows) -> dict:
     return {
         "id": inc["id"], "category": inc["category"], "latitude": inc["latitude"], "longitude": inc["longitude"],
@@ -252,7 +258,7 @@ def _marker(inc, pub_rows) -> dict:
 def list_incidents_public(conn: sqlite3.Connection = Depends(get_conn)):
     pub = _published_by_incident(conn)
     rows = conn.execute("SELECT * FROM incident WHERE state = 'active' ORDER BY incident_time DESC").fetchall()
-    return [_marker(i, pub[i["id"]]) for i in rows if i["id"] in pub]
+    return [_marker(i, pub[i["id"]]) for i in rows if i["id"] in pub and _on_map(pub[i["id"]])]
 
 
 @app.get("/api/incidents/{incident_id}")
@@ -260,7 +266,7 @@ def get_incident_public(incident_id: str, conn: sqlite3.Connection = Depends(get
     inc = conn.execute("SELECT * FROM incident WHERE id = ? AND state = 'active'", (incident_id,)).fetchone()
     pub = conn.execute(views.REPORT_SELECT + " WHERE r.status = 'published' AND r.incident_id = ? "
                        "ORDER BY r.incident_time", (incident_id,)).fetchall()
-    if inc is None or not pub:
+    if inc is None or not pub or not _on_map(pub):
         raise HTTPException(404, "incident not found")
     d = _marker(inc, pub)
     d["reports"] = [{
@@ -364,7 +370,7 @@ class ReviewIn(BaseModel):
     comment: Optional[str] = Field(None, max_length=4000)
 
 
-REVIEWABLE = ("in_review", "critical", "failed")
+REVIEWABLE = ("in_review", "critical", "failed", "published")
 
 
 @app.post("/api/operator/reports/{report_id}/review", dependencies=op)
@@ -381,6 +387,8 @@ def operator_review(report_id: str, body: ReviewIn, conn: sqlite3.Connection = D
             raise HTTPException(404, "report not found")
         if r["status"] not in REVIEWABLE:
             raise HTTPException(409, f"report in status '{r['status']}' cannot be reviewed")
+        if r["status"] == "published" and body.action != "reject":
+            raise HTTPException(409, "published reports can only be retracted (reject)")
         rid, now = new_id(), now_iso()
         conn.execute(
             "INSERT INTO review_decision (id, report_id, assessment_id, action, final_category, final_severity, "
@@ -397,7 +405,7 @@ def operator_review(report_id: str, body: ReviewIn, conn: sqlite3.Connection = D
 
 
 @app.post("/api/operator/reports/{report_id}/retry", dependencies=op)
-def operator_retry(report_id: str, background: BackgroundTasks, conn: sqlite3.Connection = Depends(get_conn)):
+def operator_retry(report_id: str, conn: sqlite3.Connection = Depends(get_conn)):
     schedule = False
     with tx(conn):
         r = conn.execute("SELECT status FROM report WHERE id = ?", (report_id,)).fetchone()
@@ -412,5 +420,5 @@ def operator_retry(report_id: str, background: BackgroundTasks, conn: sqlite3.Co
             raise HTTPException(409, "report is waiting for operator review; use review instead of retry")
         # published / critical / rejected / processing: no-op, return existing result (ERD §8.7)
     if schedule:
-        background.add_task(process_report, report_id)
+        jobs.submit(report_id)
     return views.report_detail(conn, _op_report(conn, report_id))
