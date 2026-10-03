@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# App runtime data
+backend/data/
+backend/uploads/
+.DS_Store
+.env.*
+!.env.example
