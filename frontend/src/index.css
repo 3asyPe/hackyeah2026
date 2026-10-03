@@ -1789,6 +1789,7 @@ a.counter:hover {
 .map-full .map-offline-note {
   top: auto;
   bottom: 32px;
+  z-index: 1020;
 }
 
 @media (max-width: 900px) {

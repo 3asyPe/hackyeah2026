@@ -31,7 +31,7 @@ cd frontend
 npm install && npm run dev
 ```
 
-`npm run dev:https` serves over HTTPS (self-signed) so phones on the LAN can use geolocation.
+`npm run dev:https` serves over HTTPS (self-signed) so phones on the LAN can use geolocation. For the phone flow on stage use `npm run build && npm run preview:https` (HTTPS, port 4173) instead: the dev server's HMR client reloads the page when the phone's websocket drops.
 
 - Client: http://localhost:5173
 - Operator: http://localhost:5173/operator (token `demo`)

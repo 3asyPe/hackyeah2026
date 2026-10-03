@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:https": "HTTPS=1 vite",
+    "preview:https": "HTTPS=1 vite preview --host",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

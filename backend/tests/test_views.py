@@ -58,3 +58,14 @@ def test_retracted_report_is_not_on_map():
         pub = _pub(c, rep["id"])
         assert pub["status"] == "rejected"
         assert pub["on_map"] is False
+
+
+def test_old_report_in_incident_with_fresh_report_is_on_map():
+    # A 30 h old report cannot group with a fresh one (60 min window), so use an
+    # old report (24.5 h) and a fresh one (23.8 h) that fall within the window.
+    with TestClient(app) as c:
+        old = _published(c, hours_ago=24.5, lat=50.0)
+        fresh = _published(c, hours_ago=23.8, lat=50.0)
+        assert fresh["incident_id"] == old["incident_id"]
+        assert _pub(c, old["id"])["on_map"] is True
+        assert any(i["id"] == old["incident_id"] for i in c.get("/api/incidents").json())
