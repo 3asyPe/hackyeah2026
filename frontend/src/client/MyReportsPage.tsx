@@ -9,10 +9,14 @@ import { ago, fmtTime } from '../labels'
 
 const STATUSES: Status[] = ['processing', 'in_review', 'published', 'critical', 'rejected', 'failed']
 const asStatus = (s?: string) => (s && (STATUSES as string[]).includes(s) ? (s as Status) : null)
+// The server only stores a report once the whole upload has arrived, so a 404 for a recent entry may just mean
+// it is still being sent (another tab, or the user left mid-send). Only call it lost after this long.
+const LOST_AFTER_MS = 2 * 60 * 1000
+const isOld = (createdAt: string) => Date.now() - new Date(createdAt).getTime() > LOST_AFTER_MS
 
 export default function MyReportsPage() {
   const [list, setList] = useState<MyReport[]>(() => loadMyReports())
-  // submission_keys the server says it never stored (404 on lookup)
+  // submission_keys the server says it never stored (404 on lookup, and old enough not to be still uploading)
   const [lost, setLost] = useState<Set<string>>(() => new Set())
 
   // refresh statuses once on open
@@ -41,7 +45,7 @@ export default function MyReportsPage() {
       res.forEach((x, i) => {
         const key = items[i].submission_key
         if (x.status === 'fulfilled') upsertMyReport({ submission_key: key, id: x.value.id, last_status: x.value.status })
-        else if (x.reason instanceof ApiError && x.reason.status === 404) missing.add(key)
+        else if (x.reason instanceof ApiError && x.reason.status === 404 && isOld(items[i].created_at)) missing.add(key)
       })
       setLost(missing)
       setList(loadMyReports())

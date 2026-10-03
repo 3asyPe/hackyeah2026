@@ -9,7 +9,8 @@ const days = (n: number | undefined, fallback: number) => `${n ?? fallback} days
 
 export default function PrivacyPage() {
   const { data: info } = usePoll(getPrivacy, null)
-  const aiOff = info && info.assessor_mode !== 'openai'
+  const mode = info?.assessor_mode
+  const aiOff = mode === 'replay' || mode === 'mock'
   return (
     <div className="page privacy">
       <header className="page-head">
@@ -43,14 +44,16 @@ export default function PrivacyPage() {
             service, otherwise our legitimate interest (Art. 6(1)(f)).
           </li>
           <li>
-            The photo and description are analysed by an AI model from <strong>OpenAI</strong> (USA), acting as our
-            processor. By default OpenAI does not use API data to train its models.
+            The photo, description, exact location and time are analysed by an AI model from <strong>OpenAI</strong>{' '}
+            (USA), acting as our processor. By default OpenAI does not use API data to train its models.
             {aiOff && ' In this demo instance no AI provider is called: assessments are replayed or simulated.'}
+            {mode === 'replay_first' &&
+              ' In this demo instance the bundled sample reports are answered from recorded results; any other report is sent to OpenAI as described.'}
           </li>
           <li>Operators see the full report, including the photo, to review and decide on it.</li>
           <li>
-            The public map shows only the category, severity, time and number of reports. Never your photo or your
-            description.
+            The public map shows only the incident's location (the position of its first report), category, severity,
+            time and number of reports. Never your photo or your description.
           </li>
         </ul>
       </section>
@@ -67,8 +70,9 @@ export default function PrivacyPage() {
         <h3>Your rights</h3>
         <ul>
           <li>
-            <strong>See and delete:</strong> open a report under <Link to="/my">My reports</Link> to see everything
-            stored about it, and tap <em>Delete report</em> to erase it, including the photo, at any time.
+            <strong>See and delete:</strong> open a report under <Link to="/my">My reports</Link> to see the details
+            you sent and the report's status, and tap <em>Delete report</em> to erase it, including the photo, at any
+            time once it has been assessed.
           </li>
           <li>
             You can also ask for access, correction, restriction or erasure, object to the processing, or complain to

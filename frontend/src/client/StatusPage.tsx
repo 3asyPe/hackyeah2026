@@ -15,12 +15,24 @@ function intervalFor(s: Status | undefined): number | null {
   return null // rejected is terminal
 }
 
+const gone = (e: unknown): e is ApiError => e instanceof ApiError && (e.status === 404 || e.status === 403)
+
 function groupedLine(n: number) {
   return `Grouped with ${n} other report${n === 1 ? '' : 's'} of the same incident.`
 }
 
 /** Erases the report on the server (or finds it already gone) and drops the copy kept on this device. */
-function DeleteButton({ id, token, submissionKey }: { id: string; token: string; submissionKey: string }) {
+function DeleteButton({
+  id,
+  token,
+  submissionKey,
+  processing = false,
+}: {
+  id: string
+  token: string
+  submissionKey: string
+  processing?: boolean // the server refuses (409) until the assessment finishes
+}) {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -42,11 +54,29 @@ function DeleteButton({ id, token, submissionKey }: { id: string; token: string;
   }
   return (
     <div className="delete-row">
-      <button type="button" className="btn btn-danger btn-block" onClick={() => void onDelete()} disabled={busy}>
+      <button type="button" className="btn btn-danger btn-block" onClick={() => void onDelete()} disabled={busy || processing}>
         {busy ? <Spinner size={18} /> : 'Delete report'}
       </button>
+      {processing && <div className="hint">You can delete the report once the assessment finishes.</div>}
       {err && <div className="hint hint-bad">{err}</div>}
     </div>
+  )
+}
+
+/** For a report the server no longer has: just drop the copy kept on this device. */
+function RemoveLocalButton({ submissionKey }: { submissionKey: string }) {
+  const navigate = useNavigate()
+  return (
+    <button
+      type="button"
+      className="btn btn-secondary btn-block"
+      onClick={() => {
+        removeMyReport(submissionKey)
+        navigate('/my', { replace: true })
+      }}
+    >
+      Remove from this device
+    </button>
   )
 }
 
@@ -126,9 +156,12 @@ export default function StatusPage() {
   const token = mine?.receipt_token ?? ''
   const [iv, setIv] = useState<number | null>(2500)
   const { data: report, error: err, loading } = usePoll(() => getReport(id, token), mine ? iv : null, id)
+  // 404: deleted (by the reporter elsewhere or by retention); 403: token rejected. Polling won't fix either.
+  const goneErr = gone(err) ? err : null
   useEffect(() => {
-    if (report) setIv(intervalFor(report.status))
-  }, [report?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (goneErr) setIv(null)
+    else if (report) setIv(intervalFor(report.status))
+  }, [report?.status, goneErr]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (report) patchMyReport(id, { last_status: report.status })
@@ -149,26 +182,31 @@ export default function StatusPage() {
     )
   }
 
-  if (!report) {
+  if (!report || goneErr) {
     return (
       <div className="page">
         <header className="page-head">
           <div className="eyebrow mono">Report {id.slice(0, 8)}</div>
           <h1>Report status</h1>
         </header>
-        {loading || (!err) ? (
+        {goneErr?.status === 404 ? (
+          <>
+            <div className="alert alert-warn">
+              <strong>This report was deleted</strong>
+              <span>
+                The server no longer has it. It was removed by its reporter (for example from another tab) or
+                automatically after the retention period.
+              </span>
+            </div>
+            <RemoveLocalButton submissionKey={mine.submission_key} />
+          </>
+        ) : loading || (!err) ? (
           <div className="banner banner-processing">
             <Spinner size={26} />
             <div><strong>Loading…</strong></div>
           </div>
         ) : (
-          <ErrorBox error={err} title={err instanceof ApiError && err.status === 403 ? 'Receipt token rejected' : 'Could not load report'} />
-        )}
-        {err instanceof ApiError && err.status === 404 && (
-          <>
-            <p className="muted small">It may have been deleted after the retention period.</p>
-            <DeleteButton id={id} token={token} submissionKey={mine.submission_key} />
-          </>
+          <ErrorBox error={err} title={goneErr?.status === 403 ? 'Receipt token rejected' : 'Could not load report'} />
         )}
       </div>
     )
@@ -222,7 +260,12 @@ export default function StatusPage() {
           <dd>{fmtTime(report.submitted_at)}</dd>
         </dl>
       </section>
-      <DeleteButton id={report.id} token={token} submissionKey={mine.submission_key} />
+      <DeleteButton
+        id={report.id}
+        token={token}
+        submissionKey={mine.submission_key}
+        processing={report.status === 'processing'}
+      />
       <p className="disclaimer center">
         Submitted reports are read-only. Keep this device to follow updates. <Link to="/privacy">Privacy</Link>
       </p>

@@ -424,7 +424,7 @@ export default function SubmitPage() {
 
       <p className="privacy-note">
         Please avoid faces, licence plates and names. Photos lose their GPS and device data on upload, are analysed by
-        AI and are deleted automatically after a while. You can delete your report at any time.{' '}
+        AI and are deleted automatically after a while. You can delete your report once it has been assessed.{' '}
         <Link to="/privacy">How we use your data</Link>
       </p>
 
